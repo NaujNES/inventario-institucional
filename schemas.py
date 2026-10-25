@@ -1,120 +1,106 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional
 from datetime import datetime, date
+from decimal import Decimal
 
-# ==========================================
-# 1. ROL
-# ==========================================
+# --- ROL ---
 class RolBase(BaseModel):
-    nombre_rol: str
+    nombre_rol: str = Field(..., max_length=50)
     descripcion: Optional[str] = None
 
 class RolCreate(RolBase):
     pass
 
-class RolOut(RolBase):
+class RolResponse(RolBase):
     id_rol: int
 
     class Config:
         from_attributes = True
 
 
-# ==========================================
-# 2. USUARIO
-# ==========================================
+# --- USUARIO ---
 class UsuarioBase(BaseModel):
-    numero_documento: str
-    nombre: str
+    numero_documento: str = Field(..., max_length=20)
+    nombre: str = Field(..., max_length=100)
     id_rol: int
     estado_activo: Optional[bool] = True
 
 class UsuarioCreate(UsuarioBase):
-    password: str
+    password: str = Field(..., max_length=100)
 
-class UsuarioOut(UsuarioBase):
+class UsuarioResponse(UsuarioBase):
     id_usuario: int
     fecha_creacion: datetime
-    rol: Optional[RolOut] = None
 
     class Config:
         from_attributes = True
 
 
-# ==========================================
-# 3. CLASE DE ACTIVO
-# ==========================================
+# --- CLASE DE ACTIVO ---
 class ClaseActivoBase(BaseModel):
-    nombre_clase: str
+    nombre_clase: str = Field(..., max_length=100)
     descripcion: Optional[str] = None
 
 class ClaseActivoCreate(ClaseActivoBase):
     pass
 
-class ClaseActivoOut(ClaseActivoBase):
+class ClaseActivoResponse(ClaseActivoBase):
     id_clase: int
 
     class Config:
         from_attributes = True
 
 
-# ==========================================
-# 4. UBICACIÓN
-# ==========================================
+# --- UBICACIÓN ---
 class UbicacionBase(BaseModel):
-    nombre_espacio: str
-    edificio_bloque: Optional[str] = None
+    nombre_espacio: str = Field(..., max_length=100)
+    edificio_bloque: str = Field(..., max_length=50)
     descripcion: Optional[str] = None
 
 class UbicacionCreate(UbicacionBase):
     pass
 
-class UbicacionOut(UbicacionBase):
+class UbicacionResponse(UbicacionBase):
     id_ubicacion: int
 
     class Config:
         from_attributes = True
 
 
-# ==========================================
-# 5. ACTIVO FIJO
-# ==========================================
+# --- ACTIVO FIJO ---
 class ActivoFijoBase(BaseModel):
-    codigo_unico: str
-    denominacion: str
-    marca: Optional[str] = None
-    modelo: Optional[str] = None
-    numero_serie: Optional[str] = None
-    fecha_adquisicion: Optional[date] = None
-    valor_comercial: Optional[float] = None
-    estado_fisico: Optional[str] = None
+    codigo_unico: str = Field(..., max_length=5)
+    denominacion: str = Field(..., max_length=150)
+    marca: Optional[str] = Field(None, max_length=50)
+    modelo: Optional[str] = Field(None, max_length=50)
+    numero_serie: Optional[str] = Field(None, max_length=100)
+    fecha_adquisicion: date
+    valor_comercial: Decimal
+    estado_fisico: str = Field(..., max_length=50)
     id_clase: int
     id_ubicacion: int
 
 class ActivoFijoCreate(ActivoFijoBase):
     pass
 
-class ActivoFijoOut(ActivoFijoBase):
+class ActivoFijoResponse(ActivoFijoBase):
     id_activo: int
-    clase: Optional[ClaseActivoOut] = None
-    ubicacion: Optional[UbicacionOut] = None
 
     class Config:
         from_attributes = True
 
 
-# ==========================================
-# 6. ASIGNACIÓN
-# ==========================================
+# --- ASIGNACIÓN ---
 class AsignacionBase(BaseModel):
     id_activo: int
     id_usuario_responsable: int
-    estado_asignacion: Optional[str] = "Activa"
+    estado_asignacion: str = Field(..., max_length=50)
     observaciones: Optional[str] = None
 
 class AsignacionCreate(AsignacionBase):
     pass
 
-class AsignacionOut(AsignacionBase):
+class AsignacionResponse(AsignacionBase):
     id_asignacion: int
     fecha_asignacion: datetime
     fecha_devolucion: Optional[datetime] = None
@@ -123,19 +109,17 @@ class AsignacionOut(AsignacionBase):
         from_attributes = True
 
 
-# ==========================================
-# 7. MOVIMIENTO
-# ==========================================
+# --- MOVIMIENTO ---
 class MovimientoBase(BaseModel):
     id_activo: int
     id_usuario: int
-    tipo_movimiento: str
-    descripcion_detalle: Optional[str] = None
+    tipo_movimiento: str = Field(..., max_length=50)
+    descripcion_detalle: str
 
 class MovimientoCreate(MovimientoBase):
     pass
 
-class MovimientoOut(MovimientoBase):
+class MovimientoResponse(MovimientoBase):
     id_movimiento: int
     fecha_movimiento: datetime
 
@@ -143,41 +127,59 @@ class MovimientoOut(MovimientoBase):
         from_attributes = True
 
 
-# ==========================================
-# 8. MANTENIMIENTO
-# ==========================================
+# --- MANTENIMIENTO ---
 class MantenimientoBase(BaseModel):
     id_activo: int
-    fecha_programada: Optional[date] = None
-    fecha_realizacion: Optional[date] = None
-    tipo_mantenimiento: Optional[str] = None
-    descripcion_trabajo: Optional[str] = None
-    costo: Optional[float] = None
+    fecha_programada: date
+    tipo_mantenimiento: str = Field(..., max_length=50)
+    descripcion_trabajo: str
+    costo: Optional[Decimal] = Decimal("0.00")
 
 class MantenimientoCreate(MantenimientoBase):
     pass
 
-class MantenimientoOut(MantenimientoBase):
+class MantenimientoResponse(MantenimientoBase):
     id_mantenimiento: int
+    fecha_realizacion: Optional[date] = None
 
     class Config:
         from_attributes = True
 
 
-# ==========================================
-# 9. AUDITORÍA
-# ==========================================
+# --- AUDITORÍA ---
 class AuditoriaBase(BaseModel):
     id_usuario: int
-    accion_realizada: str
-    detalle_cambio: Optional[str] = None
+    accion_realizada: str = Field(..., max_length=100)
+    detalle_cambio: str
 
 class AuditoriaCreate(AuditoriaBase):
     pass
 
-class AuditoriaOut(AuditoriaBase):
+class AuditoriaResponse(AuditoriaBase):
     id_auditoria: int
     fecha_hora: datetime
+
+    class Config:
+        from_attributes = True
+
+        from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
+
+class ActivoBase(BaseModel):
+    codigo_placa: str
+    nombre_activo: str
+    descripcion: Optional[str] = None
+    estado: Optional[str] = "Disponible"
+    id_clase: int
+    id_ubicacion: int
+
+class ActivoCreate(ActivoBase):
+    pass
+
+class ActivoResponse(ActivoBase):
+    id_activo: int
+    fecha_adquisicion: datetime
 
     class Config:
         from_attributes = True
