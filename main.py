@@ -123,3 +123,83 @@ def listar_mantenimientos(skip: int = 0, limit: int = 100, db: Session = Depends
 @app.get("/auditorias/", response_model=List[schemas.AuditoriaResponse], tags=["Auditoría"])
 def listar_auditorias(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
     return crud.get_auditorias(db, skip=skip, limit=limit)
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En producción puedes restringirlo a los dominios permitidos
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- ENDPOINTS DE ACTUALIZACIÓN Y ELIMINACIÓN: ACTIVOS FIJOS ---
+@app.put("/activos/{id_activo}", response_model=schemas.ActivoFijoResponse, tags=["Activos Fijos"])
+def actualizar_activo_fijo(id_activo: int, activo: schemas.ActivoFijoCreate, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_activo = crud.update_activo_fijo(db=db, id_activo=id_activo, activo=activo)
+    if not db_activo:
+        raise HTTPException(status_code=404, detail="Activo fijo no encontrado")
+    return db_activo
+
+@app.delete("/activos/{id_activo}", tags=["Activos Fijos"])
+def eliminar_activo_fijo(id_activo: int, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_activo = crud.delete_activo_fijo(db=db, id_activo=id_activo)
+    if not db_activo:
+        raise HTTPException(status_code=404, detail="Activo fijo no encontrado")
+    return {"message": "Activo fijo eliminado exitosamente"}
+
+
+# --- ENDPOINTS DE ACTUALIZACIÓN Y ELIMINACIÓN: USUARIOS ---
+@app.put("/usuarios/{id_usuario}", response_model=schemas.UsuarioResponse, tags=["Usuarios"])
+def actualizar_usuario(id_usuario: int, usuario: schemas.UsuarioCreate, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_usuario = crud.update_usuario(db=db, id_usuario=id_usuario, usuario=usuario)
+    if not db_usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return db_usuario
+
+@app.delete("/usuarios/{id_usuario}", tags=["Usuarios"])
+def eliminar_usuario(id_usuario: int, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_usuario = crud.delete_usuario(db=db, id_usuario=id_usuario)
+    if not db_usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return {"message": "Usuario eliminado exitosamente"}
+
+
+# --- ENDPOINTS DE ACTUALIZACIÓN Y ELIMINACIÓN: UBICACIONES ---
+@app.put("/ubicaciones/{id_ubicacion}", response_model=schemas.UbicacionResponse, tags=["Ubicaciones"])
+def actualizar_ubicacion(id_ubicacion: int, ubicacion: schemas.UbicacionCreate, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_ubicacion = crud.update_ubicacion(db=db, id_ubicacion=id_ubicacion, ubicacion=ubicacion)
+    if not db_ubicacion:
+        raise HTTPException(status_code=404, detail="Ubicación no encontrada")
+    return db_ubicacion
+
+@app.delete("/ubicaciones/{id_ubicacion}", tags=["Ubicaciones"])
+def eliminar_ubicacion(id_ubicacion: int, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_ubicacion = crud.delete_ubicacion(db=db, id_ubicacion=id_ubicacion)
+    if not db_ubicacion:
+        raise HTTPException(status_code=404, detail="Ubicación no encontrada")
+    return {"message": "Ubicación eliminada exitosamente"}
+
+# --- ENDPOINTS DE NEGOCIO ESPECIALIZADOS ---
+
+@app.patch("/asignaciones/{id_asignacion}/devolver", response_model=schemas.AsignacionResponse, tags=["Asignaciones"])
+def registrar_devolucion_asignacion(id_asignacion: int, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_asignacion = crud.devolver_asignacion(db=db, id_asignacion=id_asignacion)
+    if not db_asignacion:
+        raise HTTPException(status_code=400, detail="Asignación no encontrada o ya fue devuelta anteriormente")
+    return db_asignacion
+
+@app.patch("/mantenimientos/{id_mantenimiento}/completar", response_model=schemas.MantenimientoResponse, tags=["Mantenimientos"])
+def finalizar_mantenimiento(id_mantenimiento: int, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_mantenimiento = crud.completar_mantenimiento(db=db, id_mantenimiento=id_mantenimiento)
+    if not db_mantenimiento:
+        raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+    return db_mantenimiento
+
+@app.post("/activos/{id_activo}/trasladar", response_model=schemas.ActivoFijoResponse, tags=["Activos Fijos"])
+def trasladar_activo_fijo(id_activo: int, nueva_ubicacion_id: int, motivo: str, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_activo = crud.trasladar_activo(db=db, id_activo=id_activo, nueva_ubicacion_id=nueva_ubicacion_id, id_usuario=current_user.id_usuario, detalle=motivo)
+    if not db_activo:
+        raise HTTPException(status_code=404, detail="Activo fijo o nueva ubicación no encontrados")
+    return db_activo

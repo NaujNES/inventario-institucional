@@ -13,9 +13,7 @@ class RolCreate(RolBase):
 
 class RolResponse(RolBase):
     id_rol: int
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- USUARIO ---
@@ -31,9 +29,7 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioResponse(UsuarioBase):
     id_usuario: int
     fecha_creacion: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- CLASE DE ACTIVO ---
@@ -46,9 +42,7 @@ class ClaseActivoCreate(ClaseActivoBase):
 
 class ClaseActivoResponse(ClaseActivoBase):
     id_clase: int
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- UBICACIÓN ---
@@ -62,34 +56,31 @@ class UbicacionCreate(UbicacionBase):
 
 class UbicacionResponse(UbicacionBase):
     id_ubicacion: int
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- ACTIVO FIJO ---
 class ActivoFijoBase(BaseModel):
     codigo_unico: str = Field(..., max_length=50)
-    nombre_activo: str = Field(..., max_length=150)
-    marca: Optional[str] = Field(None, max_length=50)
-    modelo: Optional[str] = Field(None, max_length=50)
-    numero_serie: Optional[str] = Field(None, max_length=100)
-    fecha_adquisicion: Optional[date] = None
-    valor_comercial: Optional[Decimal] = Decimal("0.00")
-    estado_fisico: Optional[str] = Field(None, max_length=50)
-    estado: Optional[str] = "Disponible"
+    nombre_activo: str = Field(..., max_length=100)
     descripcion: Optional[str] = None
+    estado: Optional[str] = "Disponible"
     id_clase: int
     id_ubicacion: int
+    fecha_adquisicion: Optional[datetime] = None
 
 class ActivoFijoCreate(ActivoFijoBase):
     pass
 
 class ActivoFijoResponse(ActivoFijoBase):
     id_activo: int
+    model_config = {"from_attributes": True}
+class ActivoFijoCreate(ActivoFijoBase):
+    pass
 
-    class Config:
-        from_attributes = True
+class ActivoFijoResponse(ActivoFijoBase):
+    id_activo: int
+    model_config = {"from_attributes": True}
 
 
 # --- ASIGNACIÓN ---
@@ -104,13 +95,9 @@ class AsignacionCreate(AsignacionBase):
 
 class AsignacionResponse(AsignacionBase):
     id_asignacion: int
-    fecha_asignacion: datetime
+    fecha_asignacion: Optional[datetime] = None  # <-- Permitir opcional por seguridad
     fecha_devolucion: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-
+    model_config = {"from_attributes": True}
 # --- MOVIMIENTO ---
 class MovimientoBase(BaseModel):
     id_activo: int
@@ -124,29 +111,23 @@ class MovimientoCreate(MovimientoBase):
 class MovimientoResponse(MovimientoBase):
     id_movimiento: int
     fecha_movimiento: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- MANTENIMIENTO ---
+# --- MANTENIMIENTO ---
 class MantenimientoBase(BaseModel):
     id_activo: int
-    fecha_programada: date
     tipo_mantenimiento: str = Field(..., max_length=50)
-    descripcion_trabajo: str
-    costo: Optional[Decimal] = Decimal("0.00")
+    descripcion: str
+    fecha_mantenimiento: Optional[datetime] = None
 
 class MantenimientoCreate(MantenimientoBase):
     pass
 
 class MantenimientoResponse(MantenimientoBase):
     id_mantenimiento: int
-    fecha_realizacion: Optional[date] = None
-
-    class Config:
-        from_attributes = True
-
+    model_config = {"from_attributes": True}
 
 # --- AUDITORÍA ---
 class AuditoriaBase(BaseModel):
@@ -160,6 +141,4 @@ class AuditoriaCreate(AuditoriaBase):
 class AuditoriaResponse(AuditoriaBase):
     id_auditoria: int
     fecha_hora: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

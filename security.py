@@ -1,14 +1,18 @@
+import os
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
 import database
 import models
 
-SECRET_KEY = "tu_clave_secreta_super_segura_cambiala"
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_super_segura_cambiala")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -29,9 +33,9 @@ def get_password_hash(password: str) -> str:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -50,8 +54,17 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise credentials_exception
     
-    # Buscamos por número de documento o el campo que use tu autenticación
     user = db.query(models.Usuario).filter(models.Usuario.numero_documento == username).first()
     if user is None:
         raise credentials_exception
     return user
+
+def get_current_admin_user(current_user: models.Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):
+    # Buscamos el rol asociado al usuario actual
+    rol = db.query(models.Rol).filter(models.Rol.id_rol == current_user.id_rol).first()
+    if not rol or rol.nombre_rol.lower() not in ["administrador", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso denegado. Se requieren privilegios de Administrador."
+        )
+    return current_user

@@ -1,6 +1,6 @@
-from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from database import Base
 
 
@@ -9,6 +9,7 @@ class Rol(Base):
     
     id_rol = Column(Integer, primary_key=True, index=True)
     nombre_rol = Column(String(50), nullable=False, unique=True)
+    descripcion = Column(String(255), nullable=True)
     
     usuarios = relationship("Usuario", back_populates="rol")
 
@@ -21,9 +22,8 @@ class Ubicacion(Base):
     edificio_bloque = Column(String(100), nullable=True)
     descripcion = Column(String(255), nullable=True)
     
-    # Relación recíproca con ActivoFijo (si la tienes configurada)
     activos = relationship("ActivoFijo", back_populates="ubicacion")
-from sqlalchemy.orm import relationship  # Si ya lo tienes arriba, no necesitas repetirlo
+
 
 class ClaseActivo(Base):
     __tablename__ = "clases_activo"
@@ -32,8 +32,8 @@ class ClaseActivo(Base):
     nombre_clase = Column(String(100), nullable=False)
     descripcion = Column(String(255), nullable=True)
 
-    # Pega esto aquí dentro:
     activos = relationship("ActivoFijo", back_populates="clase")
+
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -44,7 +44,7 @@ class Usuario(Base):
     id_rol = Column(Integer, ForeignKey("roles.id_rol"), nullable=False)
     estado_activo = Column(Boolean, default=True)
     password = Column(String(255), nullable=False)
-    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    fecha_creacion = Column(DateTime, server_default=func.now())
     
     rol = relationship("Rol", back_populates="usuarios")
     asignaciones = relationship("Asignacion", back_populates="usuario")
@@ -60,12 +60,13 @@ class ActivoFijo(Base):
     estado = Column(String(50), default="Disponible")
     id_clase = Column(Integer, ForeignKey("clases_activo.id_clase"), nullable=False)
     id_ubicacion = Column(Integer, ForeignKey("ubicaciones.id_ubicacion"), nullable=False)
-    fecha_adquisicion = Column(DateTime, default=datetime.utcnow)
+    fecha_adquisicion = Column(DateTime, nullable=True)
 
-    clase = relationship("ClaseActivo", back_populates="activos", foreign_keys=[id_clase])
-    ubicacion = relationship("Ubicacion", back_populates="activos", foreign_keys=[id_ubicacion])
+    clase = relationship("ClaseActivo", back_populates="activos")
+    ubicacion = relationship("Ubicacion", back_populates="activos")
     mantenimientos = relationship("Mantenimiento", back_populates="activo")
     asignaciones = relationship("Asignacion", back_populates="activo")
+    movimientos = relationship("Movimiento", back_populates="activo")
 
 
 class Asignacion(Base):
@@ -76,10 +77,25 @@ class Asignacion(Base):
     id_usuario_responsable = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
     estado_asignacion = Column(String(50), nullable=False)
     observaciones = Column(Text, nullable=True)
-    fecha_asignacion = Column(DateTime, default=datetime.utcnow)
+    fecha_asignacion = Column(DateTime, server_default=func.now())
+    fecha_devolucion = Column(DateTime, nullable=True)
 
-    activo = relationship("ActivoFijo", back_populates="asignaciones", foreign_keys=[id_activo])
-    usuario = relationship("Usuario", back_populates="asignaciones", foreign_keys=[id_usuario_responsable])
+    activo = relationship("ActivoFijo", back_populates="asignaciones")
+    usuario = relationship("Usuario", back_populates="asignaciones")
+
+
+class Movimiento(Base):
+    __tablename__ = "movimientos"
+    
+    id_movimiento = Column(Integer, primary_key=True, index=True)
+    id_activo = Column(Integer, ForeignKey("activos.id_activo"), nullable=False)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
+    tipo_movimiento = Column(String(50), nullable=False)
+    descripcion_detalle = Column(Text, nullable=False)
+    fecha_movimiento = Column(DateTime, server_default=func.now())
+
+    activo = relationship("ActivoFijo", back_populates="movimientos")
+    usuario = relationship("Usuario")
 
 
 class Mantenimiento(Base):
@@ -87,7 +103,20 @@ class Mantenimiento(Base):
     
     id_mantenimiento = Column(Integer, primary_key=True, index=True)
     id_activo = Column(Integer, ForeignKey("activos.id_activo"), nullable=False)
+    tipo_mantenimiento = Column(String(50), nullable=False)
     descripcion = Column(Text, nullable=False)
-    fecha_mantenimiento = Column(DateTime, default=datetime.utcnow)
+    fecha_mantenimiento = Column(DateTime, nullable=True)
     
-    activo = relationship("ActivoFijo", back_populates="mantenimientos", foreign_keys=[id_activo])
+    activo = relationship("ActivoFijo", back_populates="mantenimientos")
+
+
+class Auditoria(Base):
+    __tablename__ = "auditorias"
+    
+    id_auditoria = Column(Integer, primary_key=True, index=True)
+    id_usuario = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=False)
+    accion_realizada = Column(String(100), nullable=False)
+    detalle_cambio = Column(Text, nullable=False)
+    fecha_hora = Column(DateTime, server_default=func.now())
+
+    usuario = relationship("Usuario")
