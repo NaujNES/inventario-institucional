@@ -69,14 +69,16 @@ class UbicacionResponse(UbicacionBase):
 
 # --- ACTIVO FIJO ---
 class ActivoFijoBase(BaseModel):
-    codigo_unico: str = Field(..., max_length=5)
-    denominacion: str = Field(..., max_length=150)
+    codigo_unico: str = Field(..., max_length=50)
+    nombre_activo: str = Field(..., max_length=150)
     marca: Optional[str] = Field(None, max_length=50)
     modelo: Optional[str] = Field(None, max_length=50)
     numero_serie: Optional[str] = Field(None, max_length=100)
-    fecha_adquisicion: date
-    valor_comercial: Decimal
-    estado_fisico: str = Field(..., max_length=50)
+    fecha_adquisicion: Optional[date] = None
+    valor_comercial: Optional[Decimal] = Decimal("0.00")
+    estado_fisico: Optional[str] = Field(None, max_length=50)
+    estado: Optional[str] = "Disponible"
+    descripcion: Optional[str] = None
     id_clase: int
     id_ubicacion: int
 
@@ -158,28 +160,6 @@ class AuditoriaCreate(AuditoriaBase):
 class AuditoriaResponse(AuditoriaBase):
     id_auditoria: int
     fecha_hora: datetime
-
-    class Config:
-        from_attributes = True
-
-        from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-
-class ActivoBase(BaseModel):
-    codigo_placa: str
-    nombre_activo: str
-    descripcion: Optional[str] = None
-    estado: Optional[str] = "Disponible"
-    id_clase: int
-    id_ubicacion: int
-
-class ActivoCreate(ActivoBase):
-    pass
-
-class ActivoResponse(ActivoBase):
-    id_activo: int
-    fecha_adquisicion: datetime
 
     class Config:
         from_attributes = True

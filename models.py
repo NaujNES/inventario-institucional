@@ -15,21 +15,25 @@ class Rol(Base):
 
 class Ubicacion(Base):
     __tablename__ = "ubicaciones"
-    
-    id_ubicacion = Column(Integer, primary_key=True, index=True)
-    nombre_ubicacion = Column(String(100), nullable=False)
-    
-    activos = relationship("ActivoFijo", back_populates="ubicacion")
 
+    id_ubicacion = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    nombre_espacio = Column(String(100), nullable=False)
+    edificio_bloque = Column(String(100), nullable=True)
+    descripcion = Column(String(255), nullable=True)
+    
+    # Relación recíproca con ActivoFijo (si la tienes configurada)
+    activos = relationship("ActivoFijo", back_populates="ubicacion")
+from sqlalchemy.orm import relationship  # Si ya lo tienes arriba, no necesitas repetirlo
 
 class ClaseActivo(Base):
     __tablename__ = "clases_activo"
-    
-    id_clase = Column(Integer, primary_key=True, index=True)
-    nombre_clase = Column(String(100), nullable=False)
-    
-    activos = relationship("ActivoFijo", back_populates="clase")
 
+    id_clase = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    nombre_clase = Column(String(100), nullable=False)
+    descripcion = Column(String(255), nullable=True)
+
+    # Pega esto aquí dentro:
+    activos = relationship("ActivoFijo", back_populates="clase")
 
 class Usuario(Base):
     __tablename__ = "usuarios"
