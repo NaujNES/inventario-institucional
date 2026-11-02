@@ -115,11 +115,11 @@ class MovimientoResponse(MovimientoBase):
 
 
 # --- MANTENIMIENTO ---
-# --- MANTENIMIENTO ---
 class MantenimientoBase(BaseModel):
     id_activo: int
     tipo_mantenimiento: str = Field(..., max_length=50)
     descripcion: str
+    costo: Optional[Decimal] = Decimal('0.00')  # <--- Añadido para soportar el costo
     fecha_mantenimiento: Optional[datetime] = None
 
 class MantenimientoCreate(MantenimientoBase):
@@ -128,7 +128,6 @@ class MantenimientoCreate(MantenimientoBase):
 class MantenimientoResponse(MantenimientoBase):
     id_mantenimiento: int
     model_config = {"from_attributes": True}
-
 # --- AUDITORÍA ---
 class AuditoriaBase(BaseModel):
     id_usuario: int

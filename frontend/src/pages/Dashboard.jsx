@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import Sidebar from './Sidebar';               // <--- Apunta a la misma carpeta pages
-import AssetsTable from './AssetsTable';       // <--- Apunta a la misma carpeta pages
-import AssetModal from './AssetModal';         // <--- Apunta a la misma carpeta pages
-import { Menu, ShieldCheck, Package } from 'lucide-react';
-
+import Sidebar from './Sidebar';
+import AssetsTable from './AssetsTable';
+import AssetModal from './AssetModal';
+import UsersTable from './UsersTable';
+import Overview from './Overview'; // <--- Importado correctamente arriba
+import { Menu } from 'lucide-react';
+import LoansTable from './LoansTable';
+import MaintenanceTable from './MaintenanceTable'; // <--- Añade esto arriba
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const navigate = useNavigate();
 
   const [assets, setAssets] = useState([]);
+  const [users, setUsers] = useState([]); // <--- Estado para los usuarios
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [formError, setFormError] = useState('');
@@ -31,11 +35,11 @@ export default function Dashboard() {
     navigate('/login');
   };
 
+  // Cargar datos según la pestaña activa o al iniciar
   useEffect(() => {
-    if (activeTab === 'assets') {
-      fetchAssets();
-    }
-  }, [activeTab]);
+    fetchAssets();
+    fetchUsers();
+  }, []);
 
   const fetchAssets = async () => {
     setLoading(true);
@@ -46,6 +50,15 @@ export default function Dashboard() {
       console.error('Error al cargar activos:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/usuarios');
+      setUsers(response.data);
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err);
     }
   };
 
@@ -71,6 +84,18 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeleteAsset = async (id_activo) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este activo?')) {
+      try {
+        await api.delete(`/activos/${id_activo}`);
+        fetchAssets();
+      } catch (err) {
+        console.error('Error al eliminar activo:', err);
+        alert('No se pudo eliminar el activo. Es posible que tenga dependencias.');
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex">
       <Sidebar 
@@ -92,57 +117,33 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <main className="p-6 flex-1 bg-slate-900">
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold text-white">¡Bienvenido al Sistema de Inventario! 🚀</h1>
-                <p className="text-slate-400 text-sm mt-1">Estructura modular implementada exitosamente.</p>
-              </div>
+       <main className="p-6 flex-1 bg-slate-900">
+  {activeTab === 'overview' && (
+    <Overview assets={assets} users={users} />
+  )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-slate-400 font-medium">Módulo Activo</p>
-                      <h3 className="text-2xl font-bold text-white mt-1">Inventario</h3>
-                    </div>
-                    <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg">
-                      <Package size={24} />
-                    </div>
-                  </div>
-                </div>
+  {activeTab === 'assets' && (
+    <AssetsTable 
+      assets={assets} 
+      loading={loading} 
+      setShowModal={setShowModal} 
+      onDelete={handleDeleteAsset}
+    />
+  )}
 
-                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-slate-400 font-medium">Conexión Backend</p>
-                      <h3 className="text-2xl font-bold text-emerald-400 mt-1">Conectado</h3>
-                    </div>
-                    <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg">
-                      <ShieldCheck size={24} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+  {activeTab === 'users' && (
+    <UsersTable />
+  )}
 
-          {activeTab === 'assets' && (
-            <AssetsTable 
-              assets={assets} 
-              loading={loading} 
-              setShowModal={setShowModal} 
-            />
-          )}
+  {activeTab === 'loans' && (
+    <LoansTable />
+  )}
 
-          {activeTab === 'users' && (
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-2">Usuarios y Roles</h1>
-              <p className="text-slate-400 text-sm">Control de permisos y usuarios registrados en la plataforma.</p>
-            </div>
-          )}
-        </main>
+  {/* 👇 AGRÉGALO AQUÍ DENTRO DEL MAIN */}
+  {activeTab === 'maintenance' && (
+    <MaintenanceTable />
+  )}
+</main>
       </div>
 
       <AssetModal 
@@ -154,5 +155,5 @@ export default function Dashboard() {
         formError={formError} 
       />
     </div>
-  );
+  ); // <--- Este es el cierre del return y de la función Dashboard
 }

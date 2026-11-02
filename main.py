@@ -203,3 +203,10 @@ def trasladar_activo_fijo(id_activo: int, nueva_ubicacion_id: int, motivo: str, 
     if not db_activo:
         raise HTTPException(status_code=404, detail="Activo fijo o nueva ubicación no encontrados")
     return db_activo
+
+@app.delete("/mantenimientos/{id_mantenimiento}", tags=["Mantenimientos"])
+def eliminar_mantenimiento(id_mantenimiento: int, db: Session = Depends(database.get_db), current_user: models.Usuario = Depends(security.get_current_user)):
+    db_mantenimiento = crud.delete_mantenimiento(db=db, id_mantenimiento=id_mantenimiento)
+    if not db_mantenimiento:
+        raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
+    return {"message": "Mantenimiento eliminado exitosamente"}

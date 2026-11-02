@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Numeric, Text, DateTime, ForeignKey, Boolean
+
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -100,13 +101,13 @@ class Movimiento(Base):
 
 class Mantenimiento(Base):
     __tablename__ = "mantenimientos"
-    
+
     id_mantenimiento = Column(Integer, primary_key=True, index=True)
-    id_activo = Column(Integer, ForeignKey("activos.id_activo"), nullable=False)
-    tipo_mantenimiento = Column(String(50), nullable=False)
-    descripcion = Column(Text, nullable=False)
-    fecha_mantenimiento = Column(DateTime, nullable=True)
-    
+    id_activo = Column(Integer, ForeignKey("activos.id_activo"))
+    tipo_mantenimiento = Column(String(50))
+    descripcion = Column(String(255)) # Coincide con la columna de tu BD
+    costo = Column(Numeric(10, 2), default=0.00) # <--- Asegúrate de tener este campo
+    fecha_mantenimiento = Column(DateTime, nullable=True) # Coincide con fecha_mantenimiento de tu BD
     activo = relationship("ActivoFijo", back_populates="mantenimientos")
 
 

@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from security import get_password_hash
-
+from sqlalchemy.exc import IntegrityError
 # --- ROL ---
 def get_rol(db: Session, id_rol: int):
     return db.query(models.Rol).filter(models.Rol.id_rol == id_rol).first()
@@ -170,6 +170,8 @@ def create_auditoria(db: Session, auditoria: schemas.AuditoriaCreate):
     db.commit()
     db.refresh(db_auditoria)
     return db_auditoria
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException
 
 # --- ACTUALIZAR Y ELIMINAR: ACTIVOS FIJOS ---
 def update_activo_fijo(db: Session, id_activo: int, activo: schemas.ActivoFijoCreate):
@@ -187,9 +189,16 @@ def delete_activo_fijo(db: Session, id_activo: int):
     db_activo = get_activo_fijo(db, id_activo)
     if not db_activo:
         return None
-    db.delete(db_activo)
-    db.commit()
-    return db_activo
+    try:
+        db.delete(db_activo)
+        db.commit()
+        return db_activo
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede eliminar el activo porque tiene registros asociados (movimientos, asignaciones o mantenimientos)."
+        )
 
 
 # --- ACTUALIZAR Y ELIMINAR: USUARIOS ---
@@ -290,3 +299,11 @@ def trasladar_activo(db: Session, id_activo: int, nueva_ubicacion_id: int, id_us
     db.commit()
     db.refresh(db_activo)
     return db_activo
+
+def delete_mantenimiento(db: Session, id_mantenimiento: int):
+    db_mantenimiento = get_mantenimiento(db, id_mantenimiento)
+    if not db_mantenimiento:
+        return None
+    db.delete(db_mantenimiento)
+    db.commit()
+    return db_mantenimiento
