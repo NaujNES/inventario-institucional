@@ -2,13 +2,24 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
-
-import database
+from database import Base, engine
+from fastapi import FastAPI
+from routers import (
+    asset_classes,
+    assets,
+    assignments,
+    auth,
+    locations,
+    maintenances,
+    users,
+    roles
+)
 import models
 import schemas
 import crud
 import security
-
+import database
+from fastapi.middleware.cors import CORSMiddleware
 # Crear las tablas automáticamente en MySQL si no existen
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -210,3 +221,40 @@ def eliminar_mantenimiento(id_mantenimiento: int, db: Session = Depends(database
     if not db_mantenimiento:
         raise HTTPException(status_code=404, detail="Mantenimiento no encontrado")
     return {"message": "Mantenimiento eliminado exitosamente"}
+
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+    title="Institutional Inventory API",
+    description="API REST para el sistema de inventario institucional",
+    version="1.0.0",
+)
+
+# Registrar los routers de la aplicación
+app.include_router(auth.router)
+app.include_router(assets.router)
+app.include_router(assignments.router)
+app.include_router(users.router)
+app.include_router(locations.router)
+app.include_router(maintenances.router)
+app.include_router(asset_classes.router)
+app.include_router(users.router)  # Prefijo: /usuarios
+app.include_router(roles.router)  # Prefijo: /roles
+@app.get("/", tags=["Root"])
+def read_root():
+  return {
+      "message": "API de Inventario Institucional funcionando correctamente",
+      "docs": "/docs",
+  }
+
+# --- CONFIGURACIÓN DE CORS ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173"
+    ],  # Permite peticiones desde tu frontend de React
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos los métodos (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Permite todos los headers
+)
+

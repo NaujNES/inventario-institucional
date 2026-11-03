@@ -11,7 +11,7 @@ export default function MaintenanceTable() {
   const [newMaint, setNewMaint] = useState({
     id_activo: '',
     tipo_mantenimiento: 'Preventivo',
-    descripcion_problema: '',
+    descripcion: '',
     costo: ''
   });
 
@@ -35,28 +35,26 @@ export default function MaintenanceTable() {
     fetchData();
   }, []);
 
- const handleCreateMaintenance = async (e) => {
+  const handleCreateMaintenance = async (e) => {
     e.preventDefault();
     try {
       await api.post('/mantenimientos/', {
         id_activo: parseInt(newMaint.id_activo),
         tipo_mantenimiento: newMaint.tipo_mantenimiento,
-        descripcion_problema: newMaint.descripcion_problema,
-        descripcion: newMaint.descripcion_problema,
+        descripcion: newMaint.descripcion,
         costo: parseFloat(newMaint.costo) || 0.0
       });
       setShowModal(false);
       setNewMaint({
         id_activo: '',
         tipo_mantenimiento: 'Preventivo',
-        descripcion_problema: '',
+        descripcion: '',
         costo: ''
       });
       fetchData();
     } catch (err) {
       console.error('Error detallado del backend:', err.response?.data);
       
-      // Esto mostrará el error exacto que envía FastAPI en la ventana emergente
       const detail = err.response?.data?.detail;
       let mensajeError = 'Error desconocido';
       
@@ -128,44 +126,50 @@ export default function MaintenanceTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700">
-            {maintenances.map((m) => (
-              <tr key={m.id_mantenimiento} className="hover:bg-slate-750 transition-colors">
-                <td className="p-4 font-medium text-white">#{m.id_mantenimiento}</td>
-                <td className="p-4">{m.id_activo}</td>
-                <td className="p-4">
-                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    {m.tipo_mantenimiento}
-                  </span>
-                </td>
-                <td className="p-4 text-slate-300 max-w-xs truncate">
-                  {m.descripcion_problema || m.descripcion || 'Sin descripción'}
-                </td>
-                <td className="p-4 text-emerald-400 font-medium">
-                ${Number(m.costo || m.costo_estimado || m.precio || m.valor || 0).toLocaleString()}
-                </td>
-                <td className="p-4 text-slate-400 text-sm">
-                  {m.fecha_realizacion ? new Date(m.fecha_realizacion).toLocaleDateString() : 'Pendiente'}
-                </td>
-                <td className="p-4 text-center flex items-center justify-center gap-2">
-                  {!m.fecha_realizacion && (
+            {maintenances.map((m) => {
+              const fechaFinalizacion = m.fecha_mantenimiento || m.fecha_realizacion;
+
+              return (
+                <tr key={m.id_mantenimiento} className="hover:bg-slate-750 transition-colors">
+                  <td className="p-4 font-medium text-white">#{m.id_mantenimiento}</td>
+                  <td className="p-4">{m.id_activo}</td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      {m.tipo_mantenimiento}
+                    </span>
+                  </td>
+                  <td className="p-4 text-slate-300 max-w-xs truncate">
+                    {m.descripcion || 'Sin descripción'}
+                  </td>
+                  <td className="p-4 text-emerald-400 font-medium">
+                    ${Number(m.costo || m.costo_estimado || m.precio || m.valor || 0).toLocaleString()}
+                  </td>
+                  <td className="p-4 text-slate-400 text-sm">
+                    {fechaFinalizacion ? new Date(fechaFinalizacion).toLocaleDateString() : (
+                      <span className="text-amber-400 font-medium">Pendiente</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-center flex items-center justify-center gap-2">
+                    {!fechaFinalizacion && (
+                      <button 
+                        onClick={() => handleCompleteMaintenance(m.id_mantenimiento)}
+                        className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
+                        title="Completar mantenimiento"
+                      >
+                        <CheckCircle2 size={14} /> Finalizar
+                      </button>
+                    )}
                     <button 
-                      onClick={() => handleCompleteMaintenance(m.id_mantenimiento)}
-                      className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
-                      title="Completar mantenimiento"
+                      onClick={() => handleDeleteMaintenance(m.id_mantenimiento)}
+                      className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
+                      title="Eliminar registro"
                     >
-                      <CheckCircle2 size={14} /> Finalizar
+                      <Trash2 size={14} /> Eliminar
                     </button>
-                  )}
-                  <button 
-                    onClick={() => handleDeleteMaintenance(m.id_mantenimiento)}
-                    className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
-                    title="Eliminar registro"
-                  >
-                    <Trash2 size={14} /> Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                </tr>
+              );
+            })}
             {maintenances.length === 0 && (
               <tr>
                 <td colSpan="7" className="p-8 text-center text-slate-500">
@@ -197,7 +201,7 @@ export default function MaintenanceTable() {
                   <option value="">-- Seleccione un activo --</option>
                   {assets.map((asset) => (
                     <option key={asset.id_activo} value={asset.id_activo}>
-                      {asset.codigo_unico} - {asset.nombre_activo}
+                      {asset.codigo_unico || asset.codigo_inventario || asset.codigo} - {asset.nombre_activo || asset.nombre || asset.descripcion}
                     </option>
                   ))}
                 </select>
@@ -218,13 +222,13 @@ export default function MaintenanceTable() {
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Descripción del Problema / Tarea</label>
                 <textarea
-                  value={newMaint.descripcion_problema}
-                  onChange={(e) => setNewMaint({ ...newMaint, descripcion_problema: e.target.value })}
+                  value={newMaint.descripcion}
+                  onChange={(e) => setNewMaint({ ...newMaint, descripcion: e.target.value })}
                   required
-                  rows={3}
+                  rows="3"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
-                  placeholder="Detalles del mantenimiento..."
-                />
+                  placeholder="Detalles del mantenimiento o problema..."
+                ></textarea>
               </div>
 
               <div>
