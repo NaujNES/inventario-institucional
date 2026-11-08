@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import crud
 import schemas
+import models  # 👈 1. Importa models aquí
 from database import get_db
 
 router = APIRouter(prefix="/activos", tags=["Activos Fijos"])
@@ -54,6 +55,18 @@ def update_asset(
 
 
 @router.delete("/{id_activo}", status_code=status.HTTP_200_OK)
-def delete_asset(id_activo: int, db: Session = Depends(get_db)):
-  """Elimina un activo fijo."""
-  return crud.delete_activo_fijo(db, id_activo=id_activo)
+def eliminar_activo(id_activo: int, db: Session = Depends(get_db)):
+    # 2. Buscamos el activo en la base de datos usando el modelo
+    activo = db.query(models.Activo).filter(models.Activo.id_activo == id_activo).first()
+    
+    if not activo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"No se encontró el activo con ID {id_activo}"
+        )
+    
+    # 3. Lo eliminamos y confirmamos los cambios en MySQL
+    db.delete(activo)
+    db.commit()
+    
+    return {"mensaje": "Activo eliminado exitosamente", "id_eliminado": id_activo}

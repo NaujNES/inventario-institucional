@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: inventario_institucional
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p12345"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=12345
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_DB=inventario_institucional
+      - SECRET_KEY=mi_clave_super_secreta_para_el_inventario_2026
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

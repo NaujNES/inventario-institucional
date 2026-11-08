@@ -12,38 +12,39 @@ import models
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_super_segura_cambiala")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("Falta SECRET_KEY en .env")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt.checkpw(
-        plain_password.encode('utf-8'), 
-        hashed_password.encode('utf-8')
-    )
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+        )
+    except ValueError:
+        return False
 
 def get_password_hash(password: str) -> str:
-    pwd_bytes = password.encode('utf-8')
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed.decode('utf-8')
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):
+def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)
+) -> models.Usuario:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="No se pudo validar el token.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -53,18 +54,25 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
-    user = db.query(models.Usuario).filter(models.Usuario.numero_documento == username).first()
-    if user is None:
+
+    user = (
+        db.query(models.Usuario)
+        .filter(models.Usuario.numero_documento == username)
+        .first()
+    )
+    if user is None or not user.estado_activo:
         raise credentials_exception
     return user
 
-def get_current_admin_user(current_user: models.Usuario = Depends(get_current_user), db: Session = Depends(database.get_db)):
-    # Buscamos el rol asociado al usuario actual
+def get_current_admin_user(
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(database.get_db),
+) -> models.Usuario:
     rol = db.query(models.Rol).filter(models.Rol.id_rol == current_user.id_rol).first()
-    if not rol or rol.nombre_rol.lower() not in ["administrador", "admin"]:
+    # Ahora permitimos Admin y Custodio
+    if not rol or rol.nombre_rol.lower() not in ("administrador", "admin", "custodio"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acceso denegado. Se requieren privilegios de Administrador."
+            detail="Se requieren privilegios de Administrador o Custodio.",
         )
     return current_user

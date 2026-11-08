@@ -1,0 +1,2632 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Inventario institucional</title>
+
+<!-- Aplica el tema guardado antes de pintar, para evitar el parpadeo -->
+<script>
+  (function () {
+    var dark = false;
+    try {
+      var prefs = JSON.parse(localStorage.getItem('inv-institucional:prefs:v1') || '{}');
+      var theme = prefs.theme || 'system';
+      dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (e) {
+      dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    if (dark) document.documentElement.classList.add('dark');
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Tailwind CSS (CDN) -->
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Geist', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          mono: ['"Geist Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
+        },
+        colors: {
+          canvas: 'rgb(var(--canvas) / <alpha-value>)',
+          surface: 'rgb(var(--surface) / <alpha-value>)',
+          subtle: 'rgb(var(--subtle) / <alpha-value>)',
+          line: 'rgb(var(--line) / <alpha-value>)',
+          'line-strong': 'rgb(var(--line-strong) / <alpha-value>)',
+          ink: 'rgb(var(--ink) / <alpha-value>)',
+          'ink-2': 'rgb(var(--ink-2) / <alpha-value>)',
+          'ink-3': 'rgb(var(--ink-3) / <alpha-value>)',
+          accent: 'rgb(var(--accent) / <alpha-value>)',
+          'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
+          'accent-fg': 'rgb(var(--accent-fg) / <alpha-value>)',
+          'accent-soft': 'rgb(var(--accent-soft) / <alpha-value>)'
+        },
+        boxShadow: {
+          pop: '0 16px 40px -12px rgb(15 23 42 / 0.28), 0 2px 8px rgb(15 23 42 / 0.08)'
+        }
+      }
+    }
+  };
+</script>
+
+<style>
+  /* =========================================================
+     Tokens de color. Light y dark se definen en un solo lugar.
+     Valores en "R G B" para poder usar opacidad en Tailwind.
+     ========================================================= */
+  :root {
+    color-scheme: light;
+    --canvas: 250 250 251;
+    --surface: 255 255 255;
+    --subtle: 244 245 247;
+    --line: 226 232 240;
+    --line-strong: 203 213 225;
+    --ink: 15 23 42;
+    --ink-2: 71 85 105;
+    --ink-3: 92 107 128;
+    --accent: 79 70 229;
+    --accent-hover: 67 56 202;
+    --accent-fg: 67 56 202;
+    --accent-soft: 238 242 255;
+    --danger: 220 38 38;
+    --danger-hover: 185 28 28;
+    --danger-soft: 254 242 242;
+
+    /* Estados del activo: relleno, tinta de texto y texto sobre relleno */
+    --c-disp: #10b981;  --c-disp-ink: #047857;  --c-disp-on: #0b0b0b;
+    --c-uso:  #6366f1;  --c-uso-ink:  #4338ca;  --c-uso-on:  #ffffff;
+    --c-mant: #f59e0b;  --c-mant-ink: #b45309;  --c-mant-on: #0b0b0b;
+    --c-baja: #94a3b8;  --c-baja-ink: #475569;  --c-baja-on: #0b0b0b;
+
+    --bar: #6366f1;
+    --bar-muted: #c7d2fe;
+    --cell-py: 0.75rem;
+  }
+  :root.dark {
+    color-scheme: dark;
+    --canvas: 10 11 15;
+    --surface: 18 20 26;
+    --subtle: 25 28 36;
+    --line: 38 42 53;
+    --line-strong: 58 64 79;
+    --ink: 241 245 249;
+    --ink-2: 176 186 201;
+    --ink-3: 134 145 164;
+    --accent: 79 70 229;
+    --accent-hover: 99 102 241;
+    --accent-fg: 129 140 248;
+    --accent-soft: 31 33 60;
+    --danger: 239 68 68;
+    --danger-hover: 248 113 113;
+    --danger-soft: 69 26 26;
+
+    --c-disp: #12a672;  --c-disp-ink: #6ee7b7;  --c-disp-on: #0b0b0b;
+    --c-uso:  #6d72f0;  --c-uso-ink:  #a5b4fc;  --c-uso-on:  #0b0b0b;
+    --c-mant: #c98500;  --c-mant-ink: #fcd34d;  --c-mant-on: #0b0b0b;
+    --c-baja: #7d8aa0;  --c-baja-ink: #cbd5e1;  --c-baja-on: #0b0b0b;
+
+    --bar: #818cf8;
+    --bar-muted: #3a3f73;
+  }
+  body[data-density="compact"] { --cell-py: 0.375rem; }
+
+  /* =========================================================
+     Base
+     ========================================================= */
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body.dialog-open { overflow: hidden; }
+  [hidden] { display: none !important; }
+  ::selection { background: rgb(var(--accent) / 0.22); }
+  i[data-lucide] { display: inline-block; width: 1em; height: 1em; flex: none; }
+  svg.lucide { flex: none; }
+  :focus-visible { outline: 2px solid rgb(var(--accent-fg)); outline-offset: 2px; border-radius: 6px; }
+  .field:focus-visible, .field:focus { outline: none; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--line-strong)); border-radius: 999px; border: 2px solid rgb(var(--surface)); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* =========================================================
+     Superficies
+     ========================================================= */
+  .card {
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--line));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  }
+  .card-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.25rem 0; }
+  .card-t { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.005em; }
+  .card-s { font-size: 0.8125rem; color: rgb(var(--ink-3)); margin-top: 0.125rem; }
+  .card-b { padding: 1rem 1.25rem 1.25rem; }
+  .link-btn { font-size: 0.8125rem; font-weight: 500; color: rgb(var(--accent-fg)); border-radius: 6px; padding: 0.125rem 0.25rem; margin: -0.125rem -0.25rem; }
+  .link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* =========================================================
+     Botones
+     ========================================================= */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    height: 2.25rem; padding: 0 0.875rem; border-radius: 0.5rem;
+    font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap;
+    transition: background-color .12s, border-color .12s, color .12s, box-shadow .12s;
+    cursor: pointer;
+  }
+  .btn svg { width: 1rem; height: 1rem; }
+  .btn-primary { background: rgb(var(--accent)); color: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.14); }
+  .btn-primary:hover { background: rgb(var(--accent-hover)); }
+  .btn-secondary { background: rgb(var(--surface)); color: rgb(var(--ink)); border: 1px solid rgb(var(--line-strong)); box-shadow: 0 1px 2px rgb(15 23 42 / 0.04); }
+  .btn-secondary:hover { background: rgb(var(--subtle)); }
+  .btn-danger { background: rgb(var(--danger)); color: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / 0.14); }
+  .btn-danger:hover { background: rgb(var(--danger-hover)); }
+  .btn-ghost { color: rgb(var(--ink-2)); }
+  .btn-ghost:hover { background: rgb(var(--subtle)); color: rgb(var(--ink)); }
+  .btn-sm { height: 2rem; padding: 0 0.625rem; font-size: 0.8125rem; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .icon-btn {
+    display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 0.5rem;
+    color: rgb(var(--ink-3)); transition: background-color .12s, color .12s; cursor: pointer; flex: none;
+  }
+  .icon-btn:hover, .icon-btn[aria-expanded="true"] { background: rgb(var(--subtle)); color: rgb(var(--ink)); }
+  .icon-btn svg { width: 1rem; height: 1rem; }
+  .icon-btn.is-danger:hover { background: rgb(var(--danger-soft)); color: rgb(var(--danger)); }
+
+  /* =========================================================
+     Formularios
+     ========================================================= */
+  .label { display: block; font-size: 0.8125rem; font-weight: 500; color: rgb(var(--ink)); margin-bottom: 0.375rem; }
+  .label .opt { font-weight: 400; color: rgb(var(--ink-3)); }
+  .hint { font-size: 0.75rem; color: rgb(var(--ink-3)); margin-top: 0.375rem; }
+  .err { font-size: 0.75rem; color: rgb(var(--danger)); margin-top: 0.375rem; display: flex; gap: 0.25rem; align-items: center; }
+  .err:empty { display: none; }
+  .field {
+    width: 100%; height: 2.25rem; padding: 0 0.75rem; border-radius: 0.5rem;
+    border: 1px solid rgb(var(--line-strong)); background: rgb(var(--surface)); color: rgb(var(--ink));
+    font-size: 0.875rem; transition: border-color .12s, box-shadow .12s, background-color .12s;
+  }
+  .field::placeholder { color: rgb(var(--ink-3) / 0.75); }
+  .field:hover { border-color: rgb(var(--ink-3) / 0.6); }
+  .field:focus { border-color: rgb(var(--accent)); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.18); }
+  .field[aria-invalid="true"] { border-color: rgb(var(--danger)); }
+  .field[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgb(var(--danger) / 0.16); }
+  .field:disabled { background: rgb(var(--subtle)); color: rgb(var(--ink-3)); cursor: not-allowed; }
+  textarea.field { height: auto; min-height: 4.5rem; padding: 0.5rem 0.75rem; resize: vertical; line-height: 1.45; }
+  select.field { appearance: none; -webkit-appearance: none; padding-right: 2rem; cursor: pointer; }
+  input[type="date"].field { padding-right: 0.5rem; }
+  .field-mono { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8125rem; letter-spacing: 0.01em; }
+
+  .kbd {
+    display: inline-grid; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 0.3rem;
+    border: 1px solid rgb(var(--line-strong)); border-bottom-width: 2px; border-radius: 0.3rem;
+    font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.6875rem; line-height: 1; color: rgb(var(--ink-2)); background: rgb(var(--surface));
+  }
+
+  /* Control segmentado (filtros de estado, tema, densidad) */
+  .segctl { display: inline-flex; padding: 2px; gap: 2px; border-radius: 0.625rem; background: rgb(var(--subtle)); border: 1px solid rgb(var(--line)); }
+  .segctl button {
+    display: inline-flex; align-items: center; gap: 0.375rem; height: 1.75rem; padding: 0 0.625rem; border-radius: 0.5rem;
+    font-size: 0.8125rem; font-weight: 500; color: rgb(var(--ink-2)); white-space: nowrap; transition: background-color .12s, color .12s; cursor: pointer;
+  }
+  .segctl button:hover { color: rgb(var(--ink)); }
+  .segctl button[aria-pressed="true"] { background: rgb(var(--surface)); color: rgb(var(--ink)); box-shadow: 0 1px 2px rgb(15 23 42 / 0.08), 0 0 0 1px rgb(var(--line)); }
+  .segctl .n { font-variant-numeric: tabular-nums; font-weight: 400; color: rgb(var(--ink-3)); }
+  .segctl svg { width: 0.875rem; height: 0.875rem; }
+
+  /* Opciones de estado dentro del modal */
+  .state-opt { position: relative; display: block; }
+  .state-pill {
+    display: flex; align-items: center; gap: 0.5rem; height: 2.25rem; padding: 0 0.75rem; border-radius: 0.5rem;
+    border: 1px solid rgb(var(--line-strong)); font-size: 0.8125rem; font-weight: 500; color: rgb(var(--ink-2));
+    background: rgb(var(--surface)); cursor: pointer; transition: border-color .12s, background-color .12s, color .12s; white-space: nowrap;
+  }
+  .state-opt:hover .state-pill { border-color: rgb(var(--ink-3) / 0.6); }
+  .state-opt input:checked + .state-pill {
+    border-color: var(--st); color: rgb(var(--ink));
+    background: color-mix(in srgb, var(--st) 12%, rgb(var(--surface)));
+    box-shadow: 0 0 0 1px var(--st);
+  }
+  .state-opt input:focus-visible + .state-pill { outline: 2px solid rgb(var(--accent-fg)); outline-offset: 2px; }
+
+  /* =========================================================
+     Estados (badges) y colores semánticos
+     ========================================================= */
+  .st-disp { --st: var(--c-disp); --st-ink: var(--c-disp-ink); --st-on: var(--c-disp-on); }
+  .st-uso  { --st: var(--c-uso);  --st-ink: var(--c-uso-ink);  --st-on: var(--c-uso-on); }
+  .st-mant { --st: var(--c-mant); --st-ink: var(--c-mant-ink); --st-on: var(--c-mant-on); }
+  .st-baja { --st: var(--c-baja); --st-ink: var(--c-baja-ink); --st-on: var(--c-baja-on); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.125rem 0.5rem 0.125rem 0.4375rem; border-radius: 0.375rem;
+    font-size: 0.75rem; line-height: 1.25rem; font-weight: 500; white-space: nowrap; color: var(--st-ink);
+    background: color-mix(in srgb, var(--st) 13%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st) 30%, transparent);
+  }
+  .badge-dot { width: 0.4375rem; height: 0.4375rem; border-radius: 999px; background: var(--st); flex: none; }
+  .swatch { width: 0.625rem; height: 0.625rem; border-radius: 3px; background: var(--st); flex: none; }
+
+  /* =========================================================
+     Navegación lateral
+     ========================================================= */
+  .nav-item {
+    position: relative; display: flex; align-items: center; gap: 0.625rem; padding: 0.4375rem 0.625rem; border-radius: 0.5rem;
+    font-size: 0.875rem; font-weight: 500; color: rgb(var(--ink-2)); transition: background-color .12s, color .12s;
+  }
+  .nav-item svg { width: 1rem; height: 1rem; color: rgb(var(--ink-3)); transition: color .12s; }
+  .nav-item:hover { background: rgb(var(--subtle)); color: rgb(var(--ink)); }
+  .nav-item[aria-current="page"] { background: rgb(var(--subtle)); color: rgb(var(--ink)); }
+  .nav-item[aria-current="page"] svg { color: rgb(var(--accent-fg)); }
+  .nav-item[aria-current="page"]::before {
+    content: ""; position: absolute; left: -0.75rem; top: 50%; width: 3px; height: 1.125rem; transform: translateY(-50%);
+    background: rgb(var(--accent)); border-radius: 0 3px 3px 0;
+  }
+  .nav-count { margin-left: auto; font-size: 0.75rem; font-weight: 400; color: rgb(var(--ink-3)); font-variant-numeric: tabular-nums; }
+  #scrim { opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #scrim.is-open { opacity: 1; pointer-events: auto; }
+
+  /* =========================================================
+     Tabla de inventario
+     ========================================================= */
+  .dtable { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
+  .dtable .sub { font-size: 0.75rem; }
+  .dtable thead th {
+    text-align: left; font-weight: 500; font-size: 0.8125rem; color: rgb(var(--ink-3)); background: rgb(var(--subtle));
+    padding: 0.5rem 0.625rem; border-bottom: 1px solid rgb(var(--line)); border-top: 1px solid rgb(var(--line)); white-space: nowrap;
+  }
+  .dtable thead th:first-child { padding-left: 1.25rem; }
+  .dtable thead th:last-child { padding-right: 1.25rem; }
+  .dtable tbody td { padding: var(--cell-py) 0.625rem; border-bottom: 1px solid rgb(var(--line)); vertical-align: middle; transition: background-color .1s; }
+  .dtable tbody td:first-child { padding-left: 1.25rem; }
+  .dtable tbody td:last-child { padding-right: 1.25rem; }
+  .dtable tbody tr:last-child td { border-bottom: 0; }
+  .dtable tbody tr:hover td { background: rgb(var(--subtle) / 0.7); }
+  .sort-btn { display: inline-flex; align-items: center; gap: 0.25rem; font: inherit; color: inherit; border-radius: 4px; cursor: pointer; transition: color .12s; }
+  .sort-btn:hover { color: rgb(var(--ink)); }
+  .sort-btn svg { width: 0.8125rem; height: 0.8125rem; opacity: 0.55; }
+  th[aria-sort="ascending"] .sort-btn, th[aria-sort="descending"] .sort-btn { color: rgb(var(--ink)); }
+  th[aria-sort="ascending"] .sort-btn svg, th[aria-sort="descending"] .sort-btn svg { opacity: 1; color: rgb(var(--accent-fg)); }
+  .code {
+    display: inline-block; font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.01em;
+    color: rgb(var(--ink-2)); background: rgb(var(--subtle)); border: 1px solid rgb(var(--line)); border-radius: 0.375rem; padding: 0.125rem 0.4375rem; white-space: nowrap;
+  }
+  .sub { font-size: 0.8125rem; color: rgb(var(--ink-3)); }
+  .pg {
+    min-width: 2rem; height: 2rem; padding: 0 0.5rem; border-radius: 0.5rem; font-size: 0.8125rem; font-weight: 500;
+    color: rgb(var(--ink-2)); font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color .12s, color .12s;
+  }
+  .pg:hover { background: rgb(var(--subtle)); color: rgb(var(--ink)); }
+  .pg[aria-current="page"] { background: rgb(var(--subtle)); color: rgb(var(--ink)); box-shadow: 0 0 0 1px rgb(var(--line)); }
+  .icon-btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+  #view-inventario .card { scroll-margin-top: 5rem; }
+  mark.hl { background: rgb(var(--accent) / 0.16); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .avatar {
+    display: inline-grid; place-items: center; flex: none; border-radius: 999px; font-weight: 600; letter-spacing: 0.01em; user-select: none;
+  }
+
+  /* Menús flotantes, tooltip y toasts */
+  .menu {
+    position: fixed; z-index: 70; min-width: 11rem; padding: 0.25rem; border-radius: 0.625rem;
+    background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); box-shadow: 0 12px 32px -8px rgb(15 23 42 / 0.22), 0 2px 6px rgb(15 23 42 / 0.06);
+    animation: pop-in .12s ease-out;
+  }
+  .menu-item {
+    display: flex; width: 100%; align-items: center; gap: 0.625rem; padding: 0.4375rem 0.625rem; border-radius: 0.4375rem;
+    font-size: 0.875rem; color: rgb(var(--ink)); text-align: left; cursor: pointer;
+  }
+  .menu-item svg { width: 1rem; height: 1rem; color: rgb(var(--ink-3)); }
+  .menu-item:hover, .menu-item:focus-visible { background: rgb(var(--subtle)); outline: none; }
+  .menu-item.is-danger { color: rgb(var(--danger)); }
+  .menu-item.is-danger svg { color: rgb(var(--danger)); }
+  .menu-item.is-danger:hover, .menu-item.is-danger:focus-visible { background: rgb(var(--danger-soft)); }
+  .menu-sep { height: 1px; margin: 0.25rem -0.25rem; background: rgb(var(--line)); }
+
+  #tip {
+    position: fixed; z-index: 90; pointer-events: none; max-width: 16rem; padding: 0.4375rem 0.625rem; border-radius: 0.5rem;
+    background: rgb(var(--ink)); color: rgb(var(--surface)); font-size: 0.75rem; line-height: 1.35;
+    box-shadow: 0 8px 24px -6px rgb(15 23 42 / 0.4);
+  }
+  #tip strong { display: block; font-size: 0.8125rem; font-weight: 600; }
+  #tip span { opacity: 0.78; }
+
+  #toasts { position: fixed; z-index: 80; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; width: min(24rem, calc(100vw - 2rem)); pointer-events: none; }
+  .toast {
+    pointer-events: auto; display: flex; align-items: flex-start; gap: 0.625rem; padding: 0.75rem 0.75rem 0.75rem 0.875rem; border-radius: 0.75rem;
+    background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); box-shadow: 0 12px 32px -8px rgb(15 23 42 / 0.25), 0 2px 6px rgb(15 23 42 / 0.06);
+    animation: toast-in .22s cubic-bezier(.2,.8,.2,1);
+  }
+  .toast.is-leaving { animation: toast-out .16s ease-in forwards; }
+  .toast-action { font-size: 0.8125rem; font-weight: 600; color: rgb(var(--accent-fg)); padding: 0.125rem 0.5rem; border-radius: 0.375rem; align-self: center; cursor: pointer; white-space: nowrap; }
+  .toast-action:hover { background: rgb(var(--accent-soft)); }
+
+  /* =========================================================
+     Diálogos (modal)
+     ========================================================= */
+  dialog.dlg { padding: 0; border: 0; background: transparent; color: rgb(var(--ink)); width: min(36rem, calc(100vw - 2rem)); max-width: none; max-height: none; overflow: visible; }
+  dialog.dlg-sm { width: min(26rem, calc(100vw - 2rem)); }
+  dialog.dlg::backdrop { background: rgb(2 6 23 / 0.5); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  dialog.dlg[open]::backdrop { animation: fade-in .18s ease-out; }
+  dialog.dlg[open] .dlg-panel { animation: dlg-in .2s cubic-bezier(.2,.8,.2,1); }
+  .dlg-panel { display: flex; flex-direction: column; max-height: calc(100dvh - 2rem); background: rgb(var(--surface)); border: 1px solid rgb(var(--line)); border-radius: 1rem; box-shadow: 0 24px 64px -16px rgb(2 6 23 / 0.5); }
+  .dlg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem 1rem; }
+  .dlg-body { padding: 0.25rem 1.5rem 1.25rem; overflow-y: auto; }
+  .dlg-foot { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; padding: 0.875rem 1.5rem; border-top: 1px solid rgb(var(--line)); background: rgb(var(--subtle) / 0.6); border-radius: 0 0 1rem 1rem; }
+
+  /* =========================================================
+     Gráficos
+     ========================================================= */
+  .segbar { display: flex; gap: 2px; height: 28px; }
+  .seg {
+    position: relative; display: flex; align-items: center; min-width: 0; border-radius: 4px; background: var(--st); color: var(--st-on);
+    padding-left: 0.5rem; font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; transition: filter .12s, transform .12s; cursor: default;
+  }
+  .seg:hover { filter: brightness(1.08); }
+  .seg-label { white-space: nowrap; }
+  .brow { display: grid; grid-template-columns: minmax(6.5rem, 12rem) 1fr; align-items: center; gap: 0.75rem; min-height: 1.75rem; border-radius: 6px; }
+  .brow:hover .bar-fill { background: color-mix(in srgb, var(--bar) 82%, rgb(var(--ink))); }
+  .btrack { position: relative; height: 1.75rem; }
+  .bar-fill {
+    position: absolute; left: 0; top: 50%; height: 0.75rem; margin-top: -0.375rem; background: var(--bar); border-radius: 0 4px 4px 0;
+    transition: width .7s cubic-bezier(.2,.7,.2,1), background-color .12s; min-width: 0;
+  }
+  .bar-val { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); padding-left: 0.5rem; font-size: 0.8125rem; font-weight: 500; font-variant-numeric: tabular-nums; color: rgb(var(--ink)); white-space: nowrap; }
+  .col-bar { background: var(--bar-muted); border-radius: 4px 4px 0 0; transition: background-color .12s; }
+  .col-bar.is-current { background: var(--bar); }
+  .col-wrap:hover .col-bar { background: color-mix(in srgb, var(--bar) 80%, rgb(var(--ink))); }
+
+  /* =========================================================
+     Animaciones (solo responden a una acción o a la primera carga)
+     ========================================================= */
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes dlg-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+  @keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+  @keyframes toast-out { to { opacity: 0; transform: translateY(6px) scale(.98); } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  }
+  @media (max-width: 639px) {
+    #toasts { right: 1rem; left: 1rem; width: auto; bottom: 1rem; }
+    .dlg-head { padding: 1rem 1rem 0.75rem; }
+    .dlg-body { padding: 0.25rem 1rem 1rem; }
+    .dlg-foot { padding: 0.75rem 1rem; }
+    .brow { grid-template-columns: minmax(5.5rem, 7.5rem) 1fr; gap: 0.5rem; }
+  }
+</style>
+</head>
+<body class="bg-canvas font-sans text-sm text-ink antialiased" data-density="comfortable">
+
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-pop">Saltar al contenido</a>
+
+<!-- Fondo oscuro del menú en móvil -->
+<div id="scrim" class="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" data-action="close-sidebar" aria-hidden="true"></div>
+
+<!-- ======================= SIDEBAR ======================= -->
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex w-60 -translate-x-full flex-col border-r border-line bg-surface transition-transform duration-200 ease-out lg:translate-x-0" aria-label="Navegación lateral">
+  <div class="flex h-16 flex-none items-center gap-3 border-b border-line px-4">
+    <div class="grid size-8 flex-none place-items-center rounded-lg bg-ink text-surface shadow-sm">
+      <i data-lucide="boxes" class="h-4 w-4"></i>
+    </div>
+    <div class="min-w-0 leading-tight">
+      <p id="brand-name" class="truncate text-sm font-semibold tracking-tight">Corporación Andina</p>
+      <p class="text-xs text-ink-3">Inventario institucional</p>
+    </div>
+    <button type="button" class="icon-btn -mr-1 ml-auto lg:hidden" data-action="close-sidebar" aria-label="Cerrar menú"><i data-lucide="x"></i></button>
+  </div>
+
+  <nav class="flex-1 space-y-0.5 overflow-y-auto px-3 py-4" aria-label="Principal">
+    <a href="#/dashboard" class="nav-item" data-nav="dashboard">
+      <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+    </a>
+    <a href="#/inventario" class="nav-item" data-nav="inventario">
+      <i data-lucide="package"></i><span>Inventario de activos</span><span class="nav-count" id="nav-count-assets">0</span>
+    </a>
+    <a href="#/categorias" class="nav-item" data-nav="categorias">
+      <i data-lucide="tags"></i><span>Categorías</span><span class="nav-count" id="nav-count-cats">0</span>
+    </a>
+    <a href="#/ubicaciones" class="nav-item" data-nav="ubicaciones">
+      <i data-lucide="map-pin"></i><span>Ubicaciones</span><span class="nav-count" id="nav-count-locs">0</span>
+    </a>
+    <a href="#/reportes" class="nav-item" data-nav="reportes">
+      <i data-lucide="chart-column"></i><span>Reportes</span>
+    </a>
+    <div class="my-3 border-t border-line"></div>
+    <a href="#/configuracion" class="nav-item" data-nav="configuracion">
+      <i data-lucide="settings"></i><span>Configuración</span>
+    </a>
+  </nav>
+
+  <div class="flex-none border-t border-line p-4">
+    <p class="mb-2 text-xs font-medium text-ink-3">Atajos de teclado</p>
+    <ul class="space-y-1.5 text-[13px] text-ink-2">
+      <li class="flex items-center justify-between"><span>Buscar</span><span class="flex gap-1"><kbd class="kbd">/</kbd></span></li>
+      <li class="flex items-center justify-between"><span>Nuevo activo</span><span class="flex gap-1"><kbd class="kbd">N</kbd></span></li>
+    </ul>
+  </div>
+</aside>
+
+<!-- ======================= CONTENIDO ======================= -->
+<div class="lg:pl-60">
+
+  <!-- Panel superior -->
+  <header class="sticky top-0 z-30 border-b border-line bg-surface/80 backdrop-blur">
+    <div class="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6 md:h-16 md:flex-nowrap md:py-0 lg:px-8">
+      <button type="button" class="icon-btn -ml-1.5 lg:hidden" data-action="open-sidebar" aria-label="Abrir menú"><i data-lucide="menu"></i></button>
+      <h1 id="topbar-title" class="whitespace-nowrap text-[15px] font-semibold tracking-tight">Dashboard</h1>
+
+      <div class="order-last w-full md:order-none md:mx-auto md:w-auto md:max-w-md md:flex-1" role="search">
+        <div class="relative">
+          <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"></i>
+          <input id="global-search" type="text" class="field pl-9 pr-12" placeholder="Buscar activos, códigos o responsables" autocomplete="off" spellcheck="false" aria-label="Búsqueda global">
+          <kbd id="global-search-kbd" class="kbd pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">/</kbd>
+          <button id="global-search-clear" type="button" class="icon-btn absolute right-1 top-1/2 -translate-y-1/2" hidden data-action="clear-query" aria-label="Borrar búsqueda"><i data-lucide="x"></i></button>
+        </div>
+      </div>
+
+      <div class="ml-auto flex items-center gap-1 md:ml-0">
+        <button type="button" id="theme-toggle" class="icon-btn" data-action="toggle-theme" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar tema">
+          <i data-lucide="moon" class="dark:hidden"></i>
+          <i data-lucide="sun" class="hidden dark:inline-block"></i>
+        </button>
+        <span class="mx-1 hidden h-6 w-px bg-line sm:block"></span>
+        <button type="button" id="profile-btn" class="flex items-center gap-2.5 rounded-lg p-1 sm:pr-2.5 hover:bg-subtle" data-action="profile-menu" aria-haspopup="menu" aria-expanded="false" aria-label="Menú de perfil">
+          <span class="avatar size-8 text-xs text-white" style="background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);box-shadow:0 0 0 1px rgb(var(--surface)),0 0 0 2px rgb(var(--line-strong))">VR</span>
+          <span class="hidden text-left leading-tight sm:block">
+            <span class="block text-[13px] font-medium">Valentina Ríos</span>
+            <span class="block text-xs text-ink-3">Administradora</span>
+          </span>
+          <i data-lucide="chevron-down" class="hidden h-4 w-4 text-ink-3 sm:block"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1" class="mx-auto w-full max-w-[1400px] px-4 py-6 outline-none sm:px-6 lg:px-8 lg:py-8">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section id="view-dashboard" data-view="dashboard" class="space-y-6" hidden>
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="dash-greeting" class="text-xl font-semibold tracking-tight sm:text-2xl"></h2>
+          <p id="dash-date" class="mt-0.5 text-sm text-ink-3"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" class="btn btn-secondary" data-action="export-inventory"><i data-lucide="download"></i>Exportar CSV</button>
+          <button type="button" class="btn btn-primary" data-action="new-asset"><i data-lucide="plus"></i>Nuevo activo</button>
+        </div>
+      </div>
+
+      <div id="dash-stats" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"></div>
+      <div id="dash-status" class="card"></div>
+
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div id="dash-categories" class="card lg:col-span-2"></div>
+        <div id="dash-maint" class="card"></div>
+      </div>
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div id="dash-activity" class="card lg:col-span-2"></div>
+        <div id="dash-locations" class="card"></div>
+      </div>
+    </section>
+
+    <!-- ===== INVENTARIO ===== -->
+    <section id="view-inventario" data-view="inventario" class="space-y-4" hidden>
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <p id="inv-subtitle" class="text-sm text-ink-2"></p>
+        <div class="flex items-center gap-2">
+          <button type="button" class="btn btn-secondary" data-action="export-inventory"><i data-lucide="download"></i>Exportar CSV</button>
+          <button type="button" class="btn btn-primary" data-action="new-asset"><i data-lucide="plus"></i>Nuevo activo</button>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <!-- Filtros y controles -->
+        <div class="flex flex-col gap-3 p-4 min-[1440px]:flex-row min-[1440px]:items-center min-[1440px]:justify-between">
+          <div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="relative sm:w-72">
+              <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"></i>
+              <input id="inv-search" type="text" class="field pl-9 pr-9" placeholder="Código, nombre o responsable" autocomplete="off" spellcheck="false" aria-label="Buscar en el inventario">
+              <button id="inv-search-clear" type="button" class="icon-btn absolute right-1 top-1/2 -translate-y-1/2" hidden data-action="clear-query" aria-label="Borrar búsqueda"><i data-lucide="x"></i></button>
+            </div>
+            <div class="relative sm:w-56">
+              <select id="inv-category" class="field" aria-label="Filtrar por categoría"></select>
+              <i data-lucide="chevron-down" class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"></i>
+            </div>
+          </div>
+          <div id="inv-chips" class="segctl max-w-full self-start overflow-x-auto min-[1440px]:self-auto" role="group" aria-label="Filtrar por estado"></div>
+        </div>
+        <div id="inv-filters-active" class="flex flex-wrap items-center gap-2 px-4 pb-3" hidden></div>
+
+        <!-- Tabla (escritorio) -->
+        <div id="inv-table-wrap" class="relative hidden overflow-x-auto md:block">
+          <table class="dtable min-w-[60rem]">
+            <colgroup>
+              <col style="width:6.75rem"><col><col style="width:9.5rem"><col style="width:9.25rem"><col style="width:10rem"><col style="width:8.5rem"><col style="width:3.25rem">
+            </colgroup>
+            <thead id="inv-thead"></thead>
+            <tbody id="inv-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Tarjetas (móvil) -->
+        <div id="inv-cards" class="divide-y divide-line border-t border-line md:hidden"></div>
+
+        <!-- Estado vacío -->
+        <div id="inv-empty" class="flex flex-col items-center border-t border-line px-6 py-14 text-center" hidden></div>
+
+        <!-- Pie con paginación -->
+        <div id="inv-foot" class="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
+          <p id="inv-foot-info" class="text-[13px] text-ink-3"></p>
+          <nav id="inv-pager" class="flex items-center gap-1" aria-label="Paginación"></nav>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CATEGORÍAS ===== -->
+    <section id="view-categorias" data-view="categorias" class="space-y-4" hidden>
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <p id="cat-subtitle" class="text-sm text-ink-2"></p>
+        <button type="button" class="btn btn-primary" data-action="new-category"><i data-lucide="plus"></i>Nueva categoría</button>
+      </div>
+      <div id="cat-grid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+    </section>
+
+    <!-- ===== UBICACIONES ===== -->
+    <section id="view-ubicaciones" data-view="ubicaciones" class="space-y-6" hidden>
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <p id="loc-subtitle" class="text-sm text-ink-2"></p>
+        <button type="button" class="btn btn-primary" data-action="new-location"><i data-lucide="plus"></i>Nueva ubicación</button>
+      </div>
+      <div id="loc-groups" class="space-y-6"></div>
+    </section>
+
+    <!-- ===== REPORTES ===== -->
+    <section id="view-reportes" data-view="reportes" class="space-y-6" hidden>
+      <p id="reports-subtitle" class="text-sm text-ink-2">Descarga el inventario en CSV para abrirlo en Excel, Numbers o Google Sheets.</p>
+      <div id="report-list" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+      <div id="acq-chart" class="card"></div>
+    </section>
+
+    <!-- ===== CONFIGURACIÓN ===== -->
+    <section id="view-configuracion" data-view="configuracion" class="mx-auto max-w-3xl space-y-6" hidden>
+      <p class="text-sm text-ink-2">Estos ajustes se guardan en este navegador.</p>
+
+      <div class="card divide-y divide-line">
+        <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-medium">Tema</p>
+            <p class="mt-0.5 text-[13px] text-ink-3">Elige claro, oscuro o el que use tu dispositivo.</p>
+          </div>
+          <div id="set-theme" class="segctl self-start" role="group" aria-label="Tema">
+            <button type="button" data-action="theme-set" data-theme="light" aria-pressed="false"><i data-lucide="sun"></i>Claro</button>
+            <button type="button" data-action="theme-set" data-theme="dark" aria-pressed="false"><i data-lucide="moon"></i>Oscuro</button>
+            <button type="button" data-action="theme-set" data-theme="system" aria-pressed="false"><i data-lucide="monitor"></i>Sistema</button>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-medium">Densidad de la tabla</p>
+            <p class="mt-0.5 text-[13px] text-ink-3">La densidad compacta muestra más filas en pantalla.</p>
+          </div>
+          <div id="set-density" class="segctl self-start" role="group" aria-label="Densidad de la tabla">
+            <button type="button" data-action="density-set" data-density="comfortable" aria-pressed="false">Cómoda</button>
+            <button type="button" data-action="density-set" data-density="compact" aria-pressed="false">Compacta</button>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-medium">Filas por página</p>
+            <p class="mt-0.5 text-[13px] text-ink-3">Cantidad de activos que se muestran en el inventario.</p>
+          </div>
+          <div class="relative w-full sm:w-32">
+            <select id="set-pagesize" class="field" aria-label="Filas por página">
+              <option value="8">8 filas</option>
+              <option value="12">12 filas</option>
+              <option value="20">20 filas</option>
+              <option value="50">50 filas</option>
+            </select>
+            <i data-lucide="chevron-down" class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="card divide-y divide-line">
+        <div class="p-5">
+          <label for="set-institucion" class="text-sm font-medium">Nombre de la institución</label>
+          <p class="mt-0.5 text-[13px] text-ink-3">Aparece en el menú lateral y en los reportes exportados.</p>
+          <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input id="set-institucion" type="text" class="field sm:max-w-sm" maxlength="60" autocomplete="off">
+            <button type="button" class="btn btn-secondary" data-action="save-institucion">Guardar nombre</button>
+          </div>
+          <p id="set-institucion-err" class="err" role="alert"></p>
+        </div>
+      </div>
+
+      <div class="card divide-y divide-line">
+        <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-medium">Respaldo de datos</p>
+            <p class="mt-0.5 text-[13px] text-ink-3">Descarga todo el inventario en un archivo JSON.</p>
+          </div>
+          <button type="button" class="btn btn-secondary self-start" data-action="backup-data"><i data-lucide="download"></i>Descargar respaldo</button>
+        </div>
+        <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-medium">Restablecer datos de ejemplo</p>
+            <p class="mt-0.5 text-[13px] text-ink-3">Reemplaza todo lo que hayas registrado por los datos de demostración.</p>
+          </div>
+          <button type="button" class="btn btn-secondary self-start" data-action="reset-data"><i data-lucide="rotate-ccw"></i>Restablecer</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ======================= MODAL: AGREGAR / EDITAR ACTIVO ======================= -->
+<dialog id="asset-dialog" class="dlg" aria-labelledby="asset-dialog-title">
+  <form id="asset-form" class="dlg-panel" novalidate>
+    <div class="dlg-head">
+      <div class="min-w-0">
+        <h2 id="asset-dialog-title" class="text-base font-semibold tracking-tight">Nuevo activo</h2>
+        <p id="asset-dialog-sub" class="mt-0.5 text-[13px] text-ink-3">Registra un bien en el inventario institucional.</p>
+      </div>
+      <button type="button" class="icon-btn -mr-2 -mt-1" data-close-dialog aria-label="Cerrar"><i data-lucide="x"></i></button>
+    </div>
+
+    <div class="dlg-body space-y-4">
+      <div class="grid gap-4 sm:grid-cols-5">
+        <div class="sm:col-span-2">
+          <label for="f-codigo" class="label">Código único</label>
+          <input id="f-codigo" name="codigo" type="text" class="field field-mono uppercase" maxlength="50" autocomplete="off" spellcheck="false" placeholder="ACT-0001" aria-describedby="e-codigo">
+          <p id="e-codigo" class="err" role="alert"></p>
+        </div>
+        <div class="sm:col-span-3">
+          <label for="f-nombre" class="label">Nombre del activo</label>
+          <input id="f-nombre" name="nombre" type="text" class="field" maxlength="100" autocomplete="off" placeholder="Ej.: Portátil Lenovo ThinkPad E14" aria-describedby="e-nombre" autofocus>
+          <p id="e-nombre" class="err" role="alert"></p>
+        </div>
+      </div>
+
+      <div>
+        <label for="f-descripcion" class="label">Descripción <span class="opt">(opcional)</span></label>
+        <textarea id="f-descripcion" name="descripcion" class="field" rows="2" maxlength="300" placeholder="Marca, modelo, número de serie o características" aria-describedby="e-descripcion"></textarea>
+        <p id="e-descripcion" class="err" role="alert"></p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="f-categoria" class="label">Categoría</label>
+          <div class="relative">
+            <select id="f-categoria" name="categoria" class="field" aria-describedby="e-categoria"></select>
+            <i data-lucide="chevron-down" class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"></i>
+          </div>
+          <p id="e-categoria" class="err" role="alert"></p>
+        </div>
+        <div>
+          <label for="f-ubicacion" class="label">Ubicación</label>
+          <div class="relative">
+            <select id="f-ubicacion" name="ubicacion" class="field" aria-describedby="e-ubicacion"></select>
+            <i data-lucide="chevron-down" class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"></i>
+          </div>
+          <p id="e-ubicacion" class="err" role="alert"></p>
+        </div>
+      </div>
+
+      <fieldset>
+        <legend class="label">Estado</legend>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <label class="state-opt st-disp"><input type="radio" name="estado" value="Disponible" class="sr-only" checked><span class="state-pill"><span class="badge-dot"></span>Disponible</span></label>
+          <label class="state-opt st-uso"><input type="radio" name="estado" value="En Uso" class="sr-only"><span class="state-pill"><span class="badge-dot"></span>En uso</span></label>
+          <label class="state-opt st-mant"><input type="radio" name="estado" value="Mantenimiento" class="sr-only"><span class="state-pill"><span class="badge-dot"></span>Mantenimiento</span></label>
+          <label class="state-opt st-baja"><input type="radio" name="estado" value="Dado de baja" class="sr-only"><span class="state-pill"><span class="badge-dot"></span>Dado de baja</span></label>
+        </div>
+      </fieldset>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="f-responsable" class="label">Responsable</label>
+          <div class="relative">
+            <select id="f-responsable" name="responsable" class="field" aria-describedby="e-responsable h-responsable"></select>
+            <i data-lucide="chevron-down" class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"></i>
+          </div>
+          <p id="h-responsable" class="hint"></p>
+          <p id="e-responsable" class="err" role="alert"></p>
+        </div>
+        <div>
+          <label for="f-fecha" class="label">Fecha de adquisición</label>
+          <input id="f-fecha" name="fecha" type="date" class="field" aria-describedby="e-fecha">
+          <p id="e-fecha" class="err" role="alert"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-secondary" data-close-dialog>Cancelar</button>
+      <button type="submit" id="asset-submit" class="btn btn-primary">Registrar activo</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ======================= MODAL: CATEGORÍA / UBICACIÓN ======================= -->
+<dialog id="entity-dialog" class="dlg dlg-sm" aria-labelledby="entity-title">
+  <form id="entity-form" class="dlg-panel" novalidate>
+    <div class="dlg-head">
+      <h2 id="entity-title" class="text-base font-semibold tracking-tight">Nueva categoría</h2>
+      <button type="button" class="icon-btn -mr-2 -mt-1" data-close-dialog aria-label="Cerrar"><i data-lucide="x"></i></button>
+    </div>
+    <div id="entity-fields" class="dlg-body space-y-4"></div>
+    <div class="dlg-foot">
+      <button type="button" class="btn btn-secondary" data-close-dialog>Cancelar</button>
+      <button type="submit" id="entity-submit" class="btn btn-primary">Crear categoría</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ======================= MODAL: CONFIRMAR ======================= -->
+<dialog id="confirm-dialog" class="dlg dlg-sm" aria-labelledby="confirm-title" aria-describedby="confirm-body">
+  <form method="dialog" class="dlg-panel">
+    <div class="px-6 pb-5 pt-6 max-sm:px-4">
+      <div class="mb-3 grid size-10 place-items-center rounded-full bg-[rgb(var(--danger-soft))] text-[rgb(var(--danger))]" id="confirm-icon"><i data-lucide="trash-2" class="h-5 w-5"></i></div>
+      <h2 id="confirm-title" class="text-base font-semibold tracking-tight"></h2>
+      <p id="confirm-body" class="mt-1.5 text-[13.5px] leading-relaxed text-ink-2"></p>
+    </div>
+    <div class="dlg-foot">
+      <button type="submit" value="cancel" class="btn btn-secondary">Cancelar</button>
+      <button type="submit" value="ok" id="confirm-ok" class="btn btn-danger">Eliminar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Menú contextual, tooltip y notificaciones -->
+<div id="menu" class="menu" role="menu" hidden></div>
+<div id="tip" role="tooltip" hidden></div>
+<div id="toasts" role="region" aria-label="Notificaciones" aria-live="polite"></div>
+
+<!-- Lucide Icons (CDN) -->
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  /* ==========================================================
+     1. UTILIDADES
+     ========================================================== */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC_MAP[c]);
+
+  // Normaliza texto para buscar sin importar tildes ni mayúsculas.
+  // Mantiene la misma longitud que el original (1 carácter -> 1 carácter),
+  // así los índices sirven también para resaltar coincidencias.
+  const fold = (s) => String(s ?? '').split('').map((c) => c.normalize('NFD').charAt(0).toLowerCase()).join('');
+
+  const nf = new Intl.NumberFormat('es-CO');
+  const collator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
+  const pct = (n, total) => (total ? Math.round((n / total) * 100) : 0);
+  const pad = (n) => String(n).padStart(2, '0');
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const plural = (n, one, many) => `${nf.format(n)} ${n === 1 ? one : many}`;
+
+  const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parseISO = (s) => {
+    const [y, m, d] = String(s).split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+  const todayISO = () => toISO(new Date());
+  const daysAgoISO = (n) => {
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    d.setDate(d.getDate() - n);
+    return toISO(d);
+  };
+  const fmtDate = (s) =>
+    s ? new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }).format(parseISO(s)) : '';
+
+  function timeAgo(ts) {
+    const min = Math.floor(Math.max(0, Date.now() - ts) / 60000);
+    if (min < 1) return 'hace un momento';
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return 'ayer';
+    if (d < 7) return `hace ${d} días`;
+    return fmtDate(toISO(new Date(ts)));
+  }
+
+  const icon = (name, cls = 'h-4 w-4') => `<i data-lucide="${name}" class="${cls}" aria-hidden="true"></i>`;
+  const refreshIcons = () => {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons({ attrs: { 'stroke-width': 1.75 } });
+    }
+  };
+
+  const initials = (name) =>
+    String(name).trim().split(/\s+/).slice(0, 2).map((p) => p.charAt(0).toUpperCase()).join('');
+
+  // Resalta los términos buscados. Escapa todo el texto antes de insertarlo.
+  function hl(text, terms) {
+    const s = String(text ?? '');
+    if (!terms || !terms.length || !s) return esc(s);
+    const f = fold(s);
+    const ranges = [];
+    terms.forEach((t) => {
+      if (!t) return;
+      let i = f.indexOf(t);
+      while (i !== -1) {
+        ranges.push([i, i + t.length]);
+        i = f.indexOf(t, i + t.length);
+      }
+    });
+    if (!ranges.length) return esc(s);
+    ranges.sort((a, b) => a[0] - b[0]);
+    const merged = [ranges[0].slice()];
+    for (let i = 1; i < ranges.length; i++) {
+      const last = merged[merged.length - 1];
+      if (ranges[i][0] <= last[1]) last[1] = Math.max(last[1], ranges[i][1]);
+      else merged.push(ranges[i].slice());
+    }
+    let out = '';
+    let pos = 0;
+    merged.forEach(([a, b]) => {
+      out += esc(s.slice(pos, a)) + '<mark class="hl">' + esc(s.slice(a, b)) + '</mark>';
+      pos = b;
+    });
+    return out + esc(s.slice(pos));
+  }
+
+  /* ==========================================================
+     2. CONSTANTES DEL DOMINIO
+     (mismos estados que usa el backend: Disponible, En Uso,
+      Mantenimiento y, además, Dado de baja)
+     ========================================================== */
+  const PROFILE = { nombre: 'Valentina Ríos', rol: 'Administradora', email: 'valentina.rios@institucion.edu' };
+
+  const ESTADOS = ['Disponible', 'En Uso', 'Mantenimiento', 'Dado de baja'];
+  const ESTADO = {
+    'Disponible': { cls: 'st-disp', label: 'Disponible' },
+    'En Uso': { cls: 'st-uso', label: 'En uso' },
+    'Mantenimiento': { cls: 'st-mant', label: 'Mantenimiento' },
+    'Dado de baja': { cls: 'st-baja', label: 'Dado de baja' }
+  };
+
+  const AVATAR_TONES = [
+    'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300',
+    'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+    'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
+    'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300',
+    'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+    'bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300'
+  ];
+
+  const ACTIVITY_META = {
+    alta: { icon: 'package-plus', tone: 'bg-accent-soft text-accent-fg' },
+    edicion: { icon: 'pencil', tone: 'bg-subtle text-ink-2' },
+    asignacion: { icon: 'user-check', tone: 'bg-accent-soft text-accent-fg' },
+    mantenimiento: { icon: 'wrench', tone: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' },
+    disponible: { icon: 'package-check', tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
+    baja: { icon: 'package-x', tone: 'bg-subtle text-ink-2' },
+    eliminacion: { icon: 'trash-2', tone: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300' },
+    sistema: { icon: 'info', tone: 'bg-subtle text-ink-2' }
+  };
+
+  const avatar = (user, size = 'size-6 text-[10px]') =>
+    `<span class="avatar ${size} ${AVATAR_TONES[user.id % AVATAR_TONES.length]}" aria-hidden="true">${esc(initials(user.nombre))}</span>`;
+
+  const badge = (estado) => {
+    const meta = ESTADO[estado] || ESTADO['Disponible'];
+    return `<span class="badge ${meta.cls}"><span class="badge-dot"></span>${esc(meta.label)}</span>`;
+  };
+
+  /* ==========================================================
+     3. DATOS DE EJEMPLO
+     ========================================================== */
+  function seed() {
+    const categories = [
+      { id: 1, nombre: 'Equipos de cómputo', descripcion: 'Computadores, portátiles, tablets y periféricos.', icono: 'laptop' },
+      { id: 2, nombre: 'Mobiliario', descripcion: 'Escritorios, sillas, archivadores y estantería.', icono: 'armchair' },
+      { id: 3, nombre: 'Audiovisual', descripcion: 'Proyectores, pantallas, cámaras y sonido.', icono: 'projector' },
+      { id: 4, nombre: 'Laboratorio', descripcion: 'Instrumentos y equipo científico de precisión.', icono: 'flask-conical' },
+      { id: 5, nombre: 'Redes y telecomunicaciones', descripcion: 'Switches, routers, puntos de acceso y respaldo eléctrico.', icono: 'router' },
+      { id: 6, nombre: 'Herramientas', descripcion: 'Herramientas manuales y eléctricas del taller.', icono: 'wrench' },
+      { id: 7, nombre: 'Equipo deportivo', descripcion: 'Dotación para educación física y torneos.', icono: 'dumbbell' }
+    ];
+
+    const locations = [
+      { id: 1, nombre: 'Sala de sistemas 1', bloque: 'Bloque A', descripcion: 'Aula con 30 puestos de cómputo.' },
+      { id: 2, nombre: 'Sala de sistemas 2', bloque: 'Bloque A', descripcion: 'Aula de programación y robótica.' },
+      { id: 9, nombre: 'Cuarto de redes', bloque: 'Bloque A', descripcion: 'Rack principal y respaldo eléctrico.' },
+      { id: 4, nombre: 'Biblioteca', bloque: 'Bloque B', descripcion: 'Sala de lectura y consulta.' },
+      { id: 3, nombre: 'Laboratorio de química', bloque: 'Bloque C', descripcion: 'Laboratorio con poceta y campana de extracción.' },
+      { id: 6, nombre: 'Auditorio principal', bloque: 'Bloque D', descripcion: 'Capacidad para 250 personas.' },
+      { id: 7, nombre: 'Taller de mantenimiento', bloque: 'Bloque E', descripcion: 'Herramientas y reparaciones menores.' },
+      { id: 8, nombre: 'Coliseo', bloque: 'Bloque F', descripcion: 'Cancha múltiple cubierta.' },
+      { id: 5, nombre: 'Rectoría', bloque: 'Administración', descripcion: 'Oficinas de rectoría y secretaría.' }
+    ];
+
+    const users = [
+      { id: 1, nombre: 'Camila Torres', cargo: 'Docente de sistemas' },
+      { id: 2, nombre: 'Andrés Gómez', cargo: 'Coordinador académico' },
+      { id: 3, nombre: 'Laura Mendoza', cargo: 'Bibliotecaria' },
+      { id: 4, nombre: 'Sebastián Rojas', cargo: 'Docente de química' },
+      { id: 5, nombre: 'Daniela Castro', cargo: 'Secretaria de rectoría' },
+      { id: 6, nombre: 'Mateo Herrera', cargo: 'Técnico de mantenimiento' },
+      { id: 7, nombre: 'Paula Jiménez', cargo: 'Docente de educación física' },
+      { id: 8, nombre: 'Julián Vargas', cargo: 'Coordinador de TI' }
+    ];
+
+    // Fecha de adquisición: mes (0 = este mes) y día del mes. Así el gráfico siempre tiene datos.
+    const ago = (meses, dia) => {
+      const hoy = new Date();
+      hoy.setHours(12, 0, 0, 0);
+      const t = new Date(hoy.getFullYear(), hoy.getMonth() - meses, 1, 12);
+      t.setDate(Math.min(dia, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+      return t > hoy ? 0 : Math.round((hoy - t) / 86400000);
+    };
+
+    const A = (id, nombre, descripcion, categoriaId, ubicacionId, responsableId, estado, dias) => ({
+      id,
+      codigo: 'ACT-' + String(id).padStart(4, '0'),
+      nombre,
+      descripcion,
+      categoriaId,
+      ubicacionId,
+      responsableId,
+      estado,
+      fecha: daysAgoISO(dias)
+    });
+
+    const assets = [
+      A(1, 'Portátil Lenovo ThinkPad E14', 'Intel Core i5, 16 GB de RAM y SSD de 512 GB', 1, 1, 1, 'En Uso', 410),
+      A(2, 'Portátil Dell Latitude 3420', 'Intel Core i5, 8 GB de RAM y SSD de 256 GB', 1, 5, 5, 'En Uso', 365),
+      A(3, 'Computador HP ProDesk 400 G7', 'Torre para sala de sistemas con Windows 11 Pro', 1, 1, 1, 'En Uso', 520),
+      A(4, 'Monitor Samsung de 24 pulgadas', 'Panel IPS Full HD con entrada HDMI', 1, 2, null, 'Disponible', ago(1, 5)),
+      A(5, 'Escritorio ejecutivo en L', 'Melamina color wengué con cajonera', 2, 5, 5, 'En Uso', 700),
+      A(6, 'Silla ergonómica con soporte lumbar', 'Base de cinco puntos y apoyabrazos regulables', 2, 5, 5, 'En Uso', 640),
+      A(7, 'Archivador metálico de 4 gavetas', 'Con cerradura y rieles telescópicos', 2, 4, 3, 'En Uso', 810),
+      A(8, 'Estantería modular para biblioteca', 'Seis niveles en madera aglomerada', 2, 4, 3, 'En Uso', 760),
+      A(9, 'Videoproyector Epson PowerLite X49', '3600 lúmenes, requiere cambio de lámpara', 3, 6, 2, 'Mantenimiento', 480),
+      A(10, 'Pantalla de proyección de 120 pulgadas', 'Eléctrica con montaje en techo', 3, 6, 2, 'En Uso', 470),
+      A(11, 'Sistema de sonido Yamaha StagePas 400', 'Dos parlantes, mezclador y micrófonos', 3, 6, 2, 'En Uso', ago(5, 23)),
+      A(12, 'Televisor LG de 55 pulgadas', 'Smart TV 4K para salas de lectura', 3, 4, null, 'Disponible', ago(4, 17)),
+      A(13, 'Microscopio óptico Olympus CX23', 'Objetivos de 4x, 10x, 40x y 100x', 4, 3, 4, 'En Uso', 900),
+      A(14, 'Balanza analítica Ohaus Pioneer', 'Capacidad de 220 g, calibración anual pendiente', 4, 3, 4, 'Mantenimiento', 610),
+      A(15, 'Centrífuga de laboratorio', 'Ocho tubos y velocidad regulable', 4, 3, null, 'Disponible', 560),
+      A(16, 'Agitador magnético con calefacción', 'Plancha cerámica de 20 cm', 4, 3, 4, 'En Uso', 590),
+      A(17, 'Switch Cisco Catalyst 2960 de 24 puertos', 'Administrable de capa 2', 5, 9, 8, 'En Uso', 840),
+      A(18, 'Router Mikrotik hAP ac²', 'Doble banda con balanceo de carga', 5, 9, 8, 'En Uso', 420),
+      A(19, 'Punto de acceso Ubiquiti UniFi 6 Lite', 'Wi-Fi 6 con alimentación PoE', 5, 2, null, 'Disponible', ago(3, 19)),
+      A(20, 'Taladro percutor Bosch GSB 13 RE', '600 W con maletín y juego de brocas', 6, 7, 6, 'En Uso', 380),
+      A(21, 'Caja de herramientas Stanley de 120 piezas', 'Juego completo de dados y llaves', 6, 7, null, 'Disponible', ago(5, 11)),
+      A(22, 'Soldador de estaño de 60 W', 'Resistencia dañada, sin reparación posible', 6, 7, null, 'Dado de baja', 950),
+      A(23, 'Balones de baloncesto, kit de 12', 'Talla 7 para torneos interclases', 7, 8, 7, 'En Uso', 240),
+      A(24, 'Malla de voleibol reglamentaria', 'Con antenas y postes metálicos', 7, 8, null, 'Disponible', ago(4, 6)),
+      A(25, 'Portátil HP de 14 pulgadas modelo 2018', 'Batería inservible y equipo obsoleto', 1, 2, null, 'Dado de baja', 1200),
+      A(26, 'Impresora multifuncional Epson L3250', 'Sistema de tinta continua con Wi-Fi', 1, 4, 3, 'En Uso', ago(2, 17)),
+      A(27, 'Tablet Samsung Galaxy Tab A8', '10,5 pulgadas con 64 GB de almacenamiento', 1, 1, null, 'Disponible', ago(3, 10)),
+      A(28, 'Mesa de laboratorio con poceta', 'Superficie en resina epóxica', 2, 3, 4, 'En Uso', 880),
+      A(29, 'UPS APC Smart-UPS de 1500 VA', 'Respaldo eléctrico para el rack de redes', 5, 9, 8, 'En Uso', 500),
+      A(30, 'Cámara web Logitech C920', 'Full HD con micrófono estéreo', 3, 1, null, 'Disponible', ago(2, 24)),
+      A(31, 'Proyector portátil BenQ MS535', '3600 lúmenes, falla en el ventilador', 3, 1, 1, 'Mantenimiento', ago(4, 28)),
+      A(32, 'Computador All in One Lenovo IdeaCentre', 'Core i5, 8 GB de RAM y pantalla de 23,8 pulgadas', 1, 1, 1, 'En Uso', 230),
+      A(33, 'Portátil Asus Vivobook 15', 'Ryzen 5, 16 GB de RAM y SSD de 512 GB', 1, 2, null, 'Disponible', ago(0, 2)),
+      A(34, 'Kit de robótica educativa LEGO Spike', '523 piezas con hub y sensores', 4, 1, null, 'Disponible', ago(1, 12)),
+      A(35, 'Punto de acceso TP-Link EAP245', 'AC1750 con montaje en techo', 5, 4, null, 'Disponible', ago(1, 21)),
+      A(36, 'Microscopio estereoscópico', 'Aumento de 20x a 40x con iluminación LED', 4, 3, 4, 'En Uso', ago(2, 8))
+    ];
+
+    const hours = (h) => Date.now() - h * 3600 * 1000;
+    const activity = [
+      { id: 1, type: 'mantenimiento', actor: 'Mateo Herrera', verb: 'envió a mantenimiento', subject: 'Proyector portátil BenQ MS535', extra: '', ts: hours(2) },
+      { id: 2, type: 'asignacion', actor: 'Valentina Ríos', verb: 'asignó', subject: 'Portátil Lenovo ThinkPad E14', extra: 'a Camila Torres', ts: hours(5) },
+      { id: 3, type: 'alta', actor: 'Julián Vargas', verb: 'registró', subject: 'Punto de acceso TP-Link EAP245', extra: '', ts: hours(27) },
+      { id: 4, type: 'baja', actor: 'Valentina Ríos', verb: 'dio de baja', subject: 'Soldador de estaño de 60 W', extra: '', ts: hours(52) },
+      { id: 5, type: 'mantenimiento', actor: 'Sebastián Rojas', verb: 'envió a mantenimiento', subject: 'Balanza analítica Ohaus Pioneer', extra: '', ts: hours(76) },
+      { id: 6, type: 'asignacion', actor: 'Valentina Ríos', verb: 'asignó', subject: 'Impresora multifuncional Epson L3250', extra: 'a Laura Mendoza', ts: hours(122) }
+    ];
+
+    // Conteos del mes anterior, para mostrar el cambio en las tarjetas.
+    const counts = { total: assets.length };
+    ESTADOS.forEach((e) => { counts[e] = assets.filter((a) => a.estado === e).length; });
+    const baseline = {
+      total: counts.total - 4,
+      'Disponible': counts['Disponible'] - 1,
+      'En Uso': counts['En Uso'] - 3,
+      'Mantenimiento': counts['Mantenimiento'] + 1,
+      'Dado de baja': counts['Dado de baja'] - 1
+    };
+
+    return { categories, locations, users, assets, activity, baseline, seq: { asset: 37, category: 8, location: 10 } };
+  }
+
+  /* ==========================================================
+     4. ESTADO Y PERSISTENCIA (localStorage con respaldo seguro)
+     ========================================================== */
+  const LS_DATA = 'inv-institucional:data:v1';
+  const LS_PREFS = 'inv-institucional:prefs:v1';
+
+  const store = {
+    get(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    },
+    set(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
+    },
+    del(key) {
+      try { localStorage.removeItem(key); } catch (e) { }
+    }
+  };
+
+  const DEFAULT_PREFS = { theme: 'system', density: 'comfortable', pageSize: 8, institucion: 'Corporación Andina' };
+  const PAGE_SIZES = [8, 12, 20, 50];
+
+  // 👇 DECLARAMOS PREFS AQUÍ ARRIBA PARA QUE EXISTA GLOBALMENTE
+  let prefs = Object.assign({}, DEFAULT_PREFS, store.get(LS_PREFS) || {});
+  if (!PAGE_SIZES.includes(Number(prefs.pageSize))) prefs.pageSize = DEFAULT_PREFS.pageSize;
+  prefs.pageSize = Number(prefs.pageSize);
+
+  const savePrefs = () => store.set(LS_PREFS, prefs);
+
+  // 👇 DECLARAMOS DATA VACÍA PARA EL BACKEND
+  let data = {
+    assets: [],
+    categories: [],
+    locations: [],
+    users: [],
+    activity: [],
+    baseline: { total: 0, 'Disponible': 0, 'En Uso': 0, 'Mantenimiento': 0, 'Dado de baja': 0 },
+    seq: { asset: 1, category: 1, location: 1 }
+  };
+
+  const ui = {
+    query: '',
+    category: 'all',
+    location: 'all',
+    status: 'all',
+    sort: { key: 'codigo', dir: 'asc' },
+    page: 1,
+    revealed: false,
+    editingId: null,
+    entity: null
+  };
+  // Función para traer los datos desde FastAPI con respaldo automático si algo falla o está vacío
+  async function cargarDatosDesdeBackend() {
+    try {
+      const [resActivos, resUbicaciones, resUsuarios, resClases] = await Promise.all([
+        fetch("http://127.0.0.1:8000/activos/"),
+        fetch("http://127.0.0.1:8000/ubicaciones/"),
+        fetch("http://127.0.0.1:8000/usuarios/"),
+        fetch("http://127.0.0.1:8000/clases-activo/") // 👈 Asegúrate de que esta sea la ruta exacta en tu FastAPI
+      ]);
+
+      // Si algún endpoint responde con error (ej. 404 o 500), lanzamos error para activar el respaldo
+      if (!resActivos.ok || !resUbicaciones.ok || !resUsuarios.ok || !resClases.ok) {
+        throw new Error("Uno o más endpoints de FastAPI no respondieron correctamente.");
+      }
+
+      const rawAssets = await resActivos.json();
+      const rawLocs = await resUbicaciones.json();
+      const rawUsers = await resUsuarios.json();
+      const rawClases = await resClases.json();
+
+      // Si la base de datos de MySQL está totalmente vacía, cargamos el seed para que la interfaz no falle
+      if (rawAssets.length === 0 && rawLocs.length === 0 && rawClases.length === 0) {
+        console.warn("La base de datos está vacía. Cargando datos de demostración...");
+        data = seed();
+        return;
+      }
+
+      // Mapeo de datos reales
+      data.assets = rawAssets.map(a => ({
+        id: a.id_activo || a.id,
+        codigo: a.codigo_unico || a.codigo,
+        nombre: a.nombre,
+        descripcion: a.descripcion,
+        categoriaId: a.categoria_id || a.categoriaId,
+        ubicacionId: a.ubicacion_id || a.ubicacionId,
+        responsableId: a.usuario_id || a.responsable_id || a.responsableId,
+        estado: a.estado,
+        fecha: a.fecha_adquisicion || a.fecha || '2026-01-01'
+      }));
+
+      data.locations = rawLocs.map(l => ({
+        id: l.id_ubicacion || l.id,
+        nombre: l.nombre,
+        bloque: l.bloque || 'General',
+        descripcion: l.descripcion
+      }));
+
+      data.users = rawUsers.map(u => ({
+        id: u.id_usuario || u.id,
+        nombre: u.nombre || `${u.nombres || ''} ${u.apellidos || ''}`.trim(),
+        cargo: u.cargo || 'Funcionario'
+      }));
+
+      data.categories = rawClases.map(c => ({
+        id: c.id_clase || c.id,
+        nombre: c.nombre,
+        descripcion: c.descripcion,
+        icono: 'tag'
+      }));
+
+      data.baseline.total = data.assets.length;
+      console.log("¡Datos sincronizados y mapeados con FastAPI exitosamente!");
+    } catch (error) {
+      console.warn("No se pudo conectar con FastAPI o hubo un error. Usando datos de ejemplo (seed)...", error);
+      data = seed(); // 👈 Esto rescata la interfaz para que todos los botones y modales funcionen de inmediato
+    }
+  }
+  /* ----- Consultas sobre los datos ----- */
+  const byId = (list, id) => list.find((x) => x.id === id) || null;
+  const catOf = (a) => byId(data.categories, a.categoriaId);
+  const locOf = (a) => byId(data.locations, a.ubicacionId);
+  const userOf = (a) => byId(data.users, a.responsableId);
+  const countBy = (field, id) => data.assets.filter((a) => a[field] === id).length;
+
+  function statusCounts(list = data.assets) {
+    const c = { total: list.length };
+    ESTADOS.forEach((e) => { c[e] = 0; });
+    list.forEach((a) => { if (c[a.estado] !== undefined) c[a.estado] += 1; });
+    return c;
+  }
+
+  function haystack(a) {
+    const cat = catOf(a);
+    const loc = locOf(a);
+    const usr = userOf(a);
+    return fold([
+      a.codigo, a.nombre, a.descripcion,
+      cat ? cat.nombre : '',
+      loc ? `${loc.nombre} ${loc.bloque}` : '',
+      usr ? usr.nombre : 'sin asignar',
+      a.estado, (ESTADO[a.estado] || {}).label
+    ].join(' '));
+  }
+
+  const queryTerms = () => fold(ui.query).split(/\s+/).filter(Boolean);
+
+  function filteredAssets({ ignoreStatus = false } = {}) {
+    const terms = queryTerms();
+    return data.assets.filter((a) => {
+      if (ui.category !== 'all' && a.categoriaId !== ui.category) return false;
+      if (ui.location !== 'all' && a.ubicacionId !== ui.location) return false;
+      if (!ignoreStatus && ui.status !== 'all' && a.estado !== ui.status) return false;
+      if (!terms.length) return true;
+      const h = haystack(a);
+      return terms.every((t) => h.includes(t));
+    });
+  }
+
+  const SORT_KEYS = {
+    codigo: (a) => a.codigo,
+    nombre: (a) => a.nombre,
+    categoria: (a) => (catOf(a) || {}).nombre || '',
+    ubicacion: (a) => (locOf(a) || {}).nombre || '',
+    responsable: (a) => (userOf(a) || {}).nombre || '',
+    estado: (a) => ESTADOS.indexOf(a.estado)
+  };
+
+  function sortAssets(list) {
+    const { key, dir } = ui.sort;
+    const get = SORT_KEYS[key] || SORT_KEYS.codigo;
+    const sign = dir === 'desc' ? -1 : 1;
+    return list.slice().sort((a, b) => {
+      const va = get(a);
+      const vb = get(b);
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * sign || collator.compare(a.codigo, b.codigo);
+      if (key === 'responsable') {
+        if (!va && vb) return 1;
+        if (va && !vb) return -1;
+      }
+      return collator.compare(va, vb) * sign || collator.compare(a.codigo, b.codigo);
+    });
+  }
+
+  function logActivity(type, verb, subject, extra = '') {
+    data.activity.unshift({ id: Date.now() + Math.random(), type, actor: PROFILE.nombre, verb, subject, extra, ts: Date.now() });
+    if (data.activity.length > 40) data.activity.length = 40;
+  }
+
+  /* ==========================================================
+     5. TEMA
+     ========================================================== */
+  const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const isDark = () => document.documentElement.classList.contains('dark');
+
+  function applyTheme() {
+    const dark = prefs.theme === 'dark' || (prefs.theme === 'system' && mqDark.matches);
+    document.documentElement.classList.toggle('dark', dark);
+  }
+  function applyDensity() {
+    document.body.dataset.density = prefs.density === 'compact' ? 'compact' : 'comfortable';
+  }
+  function setTheme(theme) {
+    prefs.theme = theme;
+    savePrefs();
+    applyTheme();
+    renderSettingsControls();
+  }
+  if (mqDark.addEventListener) mqDark.addEventListener('change', () => { if (prefs.theme === 'system') applyTheme(); });
+
+  /* ==========================================================
+     6. ROUTER (usa el hash de la URL: #/inventario, #/reportes...)
+     ========================================================== */
+  const VIEWS = {
+    dashboard: { title: 'Dashboard', render: () => renderDashboard() },
+    inventario: { title: 'Inventario de activos', render: () => renderInventory() },
+    categorias: { title: 'Categorías', render: () => renderCategories() },
+    ubicaciones: { title: 'Ubicaciones', render: () => renderLocations() },
+    reportes: { title: 'Reportes', render: () => renderReports() },
+    configuracion: { title: 'Configuración', render: () => renderSettings() }
+  };
+  let currentView = 'dashboard';
+
+  function currentRoute() {
+    const m = location.hash.match(/^#\/([a-z]+)/);
+    return m && VIEWS[m[1]] ? m[1] : 'dashboard';
+  }
+
+  function navigate(name) {
+    const target = '#/' + name;
+    if (location.hash === target) route();
+    else location.hash = target;
+  }
+
+  function renderChrome() {
+    $('#brand-name').textContent = prefs.institucion;
+    $('#nav-count-assets').textContent = nf.format(data.assets.length);
+    $('#nav-count-cats').textContent = nf.format(data.categories.length);
+    $('#nav-count-locs').textContent = nf.format(data.locations.length);
+    $$('.nav-item').forEach((a) => {
+      if (a.dataset.nav === currentView) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    $('#topbar-title').textContent = VIEWS[currentView].title;
+    document.title = `${VIEWS[currentView].title} - Inventario institucional`;
+  }
+
+  function renderAll() {
+    renderChrome();
+    VIEWS[currentView].render();
+  }
+
+  function route() {
+    currentView = currentRoute();
+    $$('[data-view]').forEach((el) => { el.hidden = el.dataset.view !== currentView; });
+    closeSidebar();
+    closeMenu();
+    hideTip();
+    renderAll();
+    window.scrollTo(0, 0);
+  }
+
+  // Ir al inventario con filtros ya aplicados (desde tarjetas y gráficos)
+  function goInventory({ status = 'all', category = 'all', location = 'all', query = '' } = {}) {
+    ui.status = status;
+    ui.category = category;
+    ui.location = location;
+    ui.query = query;
+    ui.page = 1;
+    syncSearchInputs();
+    navigate('inventario');
+  }
+
+  /* ----- Barra lateral en móvil ----- */
+  const sidebar = $('#sidebar');
+  const scrim = $('#scrim');
+  const mqDesktop = window.matchMedia('(min-width: 1024px)');
+
+  function syncSidebarInert() {
+    const open = !sidebar.classList.contains('-translate-x-full');
+    if (mqDesktop.matches || open) sidebar.removeAttribute('inert');
+    else sidebar.setAttribute('inert', '');
+  }
+  function openSidebar() {
+    sidebar.classList.remove('-translate-x-full');
+    scrim.classList.add('is-open');
+    syncSidebarInert();
+    const first = $('.nav-item', sidebar);
+    if (first && !mqDesktop.matches) first.focus();
+  }
+  function closeSidebar() {
+    sidebar.classList.add('-translate-x-full');
+    scrim.classList.remove('is-open');
+    syncSidebarInert();
+  }
+  if (mqDesktop.addEventListener) mqDesktop.addEventListener('change', () => { closeSidebar(); });
+
+  /* ==========================================================
+     7. VISTA: DASHBOARD
+     ========================================================== */
+  const TONES = {
+    accent: 'bg-accent-soft text-accent-fg',
+    uso: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
+    mant: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+    disp: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+  };
+
+  function statCard({ label, value, prev, icon: ic, tone, upIsGood }) {
+    const diff = value - prev;
+    let cls = 'text-ink-3';
+    let arrow = 'minus';
+    let txt = 'Sin cambios';
+    if (diff !== 0) {
+      const good = upIsGood === null ? null : (diff > 0) === upIsGood;
+      cls = good === null ? 'text-ink-2' : good ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400';
+      arrow = diff > 0 ? 'arrow-up-right' : 'arrow-down-right';
+      txt = (diff > 0 ? '+' : '−') + nf.format(Math.abs(diff));
+    }
+    return `
+      <div class="card p-5">
+        <div class="flex items-center justify-between">
+          <p class="text-[13px] font-medium text-ink-2">${esc(label)}</p>
+          <span class="grid size-8 place-items-center rounded-lg ${TONES[tone]}">${icon(ic)}</span>
+        </div>
+        <p class="mt-3 text-[30px] font-semibold leading-none tracking-tight">${nf.format(value)}</p>
+        <p class="mt-3 flex items-center gap-1.5 text-[13px]">
+          <span class="inline-flex items-center gap-0.5 font-medium ${cls}">${icon(arrow, 'h-3.5 w-3.5')}${txt}</span>
+          <span class="text-ink-3">vs. mes anterior</span>
+        </p>
+      </div>`;
+  }
+
+  function cardHead(title, subtitle, actionHTML = '') {
+    return `<div class="card-h"><div class="min-w-0"><h3 class="card-t">${esc(title)}</h3>${subtitle ? `<p class="card-s">${subtitle}</p>` : ''}</div>${actionHTML}</div>`;
+  }
+
+  function renderDashboard() {
+    const c = statusCounts();
+    const hour = new Date().getHours();
+    const saludo = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
+    $('#dash-greeting').textContent = `${saludo}, ${PROFILE.nombre.split(' ')[0]}`;
+    $('#dash-date').textContent = cap(new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()));
+
+    const b = data.baseline;
+    $('#dash-stats').innerHTML = [
+      statCard({ label: 'Total de activos', value: c.total, prev: b.total, icon: 'package', tone: 'accent', upIsGood: true }),
+      statCard({ label: 'Activos en uso', value: c['En Uso'], prev: b['En Uso'], icon: 'user-check', tone: 'uso', upIsGood: null }),
+      statCard({ label: 'En mantenimiento', value: c['Mantenimiento'], prev: b['Mantenimiento'], icon: 'wrench', tone: 'mant', upIsGood: false }),
+      statCard({ label: 'Disponibles', value: c['Disponible'], prev: b['Disponible'], icon: 'package-check', tone: 'disp', upIsGood: true })
+    ].join('');
+
+    renderStatusBar(c);
+    renderCategoryBars();
+    renderMaintenanceList();
+    renderActivity();
+    renderLocationList();
+    refreshIcons();
+    fitSegLabels();
+    animateBars();
+  }
+
+  // Barra segmentada: cómo se reparte el inventario según su estado
+  function renderStatusBar(c) {
+    const parts = ESTADOS.map((e) => ({ e, n: c[e] })).filter((p) => p.n > 0);
+    const link = `<a href="#/inventario" class="link-btn" data-action="goto-all">Ver inventario</a>`;
+    let body;
+    if (!parts.length) {
+      body = `<p class="py-3 text-[13px] text-ink-3">Aún no hay activos registrados. Cuando agregues el primero, verás aquí cómo se reparte por estado.</p>`;
+    } else {
+      const blocks = parts.map((p) => {
+        const meta = ESTADO[p.e];
+        const share = pct(p.n, c.total);
+        return `<button type="button" class="seg ${meta.cls}" style="flex:${p.n} 1 0" data-action="goto-status" data-status="${esc(p.e)}"
+                  data-tip-title="${esc(meta.label)}" data-tip-text="${plural(p.n, 'activo', 'activos')} de ${nf.format(c.total)} (${share}%). Clic para ver la lista."
+                  aria-label="${esc(meta.label)}: ${plural(p.n, 'activo', 'activos')}, ${share}% del inventario">
+                  <span class="seg-label">${share}%</span></button>`;
+      }).join('');
+      const legend = parts.map((p) => `<li class="flex items-center gap-2 ${ESTADO[p.e].cls}"><span class="swatch"></span><span class="text-[13px] text-ink-2">${esc(ESTADO[p.e].label)}</span></li>`).join('');
+      body = `<div class="segbar" role="group" aria-label="Distribución del inventario por estado">${blocks}</div>
+              <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">${legend}</ul>`;
+    }
+    $('#dash-status').innerHTML = cardHead('Estado del inventario', `${plural(c.total, 'activo registrado', 'activos registrados')}`, link) + `<div class="card-b">${body}</div>`;
+  }
+
+  // Los textos que caben dentro de cada bloque se muestran; los que no, se omiten
+  function fitSegLabels() {
+    $$('#dash-status .seg').forEach((seg) => {
+      const label = $('.seg-label', seg);
+      if (!label) return;
+      label.hidden = false;
+      label.hidden = label.offsetWidth + 16 > seg.clientWidth;
+    });
+  }
+
+  // Barras horizontales: activos por categoría, de mayor a menor
+  function renderCategoryBars() {
+    const total = data.assets.length;
+    let rows = data.categories
+      .map((c) => ({ id: c.id, nombre: c.nombre, n: countBy('categoriaId', c.id) }))
+      .sort((a, b) => b.n - a.n || collator.compare(a.nombre, b.nombre));
+    if (rows.length > 7) {
+      const rest = rows.slice(6);
+      rows = rows.slice(0, 6).concat([{ id: null, nombre: `Otras (${rest.length})`, n: rest.reduce((s, r) => s + r.n, 0) }]);
+    }
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    const list = rows.length
+      ? `<ul class="space-y-1">${rows.map((r) => `
+          <li class="brow" tabindex="0" data-tip-title="${esc(r.nombre)}" data-tip-text="${plural(r.n, 'activo', 'activos')} (${pct(r.n, total)}% del inventario)"
+              aria-label="${esc(r.nombre)}: ${plural(r.n, 'activo', 'activos')}">
+            <span class="truncate text-[13px] text-ink-2" title="${esc(r.nombre)}">${esc(r.nombre)}</span>
+            <div class="btrack"><div class="bar-fill" data-p="${(r.n / max).toFixed(4)}" style="width:0"><span class="bar-val">${nf.format(r.n)}</span></div></div>
+          </li>`).join('')}</ul>`
+      : `<p class="py-3 text-[13px] text-ink-3">Crea una categoría para empezar a clasificar tus activos.</p>`;
+    $('#dash-categories').innerHTML =
+      cardHead('Activos por categoría', `${plural(data.categories.length, 'categoría', 'categorías')} con activos registrados`,
+        `<a href="#/categorias" class="link-btn">Administrar</a>`) + `<div class="card-b">${list}</div>`;
+  }
+
+  function animateBars() {
+    const bars = $$('#view-dashboard .bar-fill');
+    const apply = () => bars.forEach((b) => { b.style.width = `calc((100% - 2.75rem) * ${b.dataset.p})`; });
+    if (ui.revealed) { apply(); return; }
+    ui.revealed = true;
+    requestAnimationFrame(() => requestAnimationFrame(apply));
+  }
+
+  function renderMaintenanceList() {
+    const list = data.assets.filter((a) => a.estado === 'Mantenimiento');
+    const items = list.map((a) => {
+      const loc = locOf(a);
+      return `<li><button type="button" class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-subtle" data-action="edit-asset" data-id="${a.id}">
+        <span class="grid size-8 flex-none place-items-center rounded-lg ${TONES.mant}">${icon('wrench')}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-[13.5px] font-medium">${esc(a.nombre)}</span>
+          <span class="block truncate text-xs text-ink-3">${esc(a.codigo)} en ${esc(loc ? loc.nombre : 'sin ubicación')}</span>
+        </span>
+        ${icon('chevron-right', 'h-4 w-4 text-ink-3')}
+      </button></li>`;
+    }).join('');
+    const empty = `<div class="flex flex-col items-center py-8 text-center">
+        <span class="mb-3 grid size-10 place-items-center rounded-full ${TONES.disp}">${icon('check', 'h-5 w-5')}</span>
+        <p class="text-sm font-medium">Todo en orden</p>
+        <p class="mt-0.5 text-[13px] text-ink-3">Ningún activo está en mantenimiento.</p></div>`;
+    $('#dash-maint').innerHTML =
+      cardHead('En mantenimiento', plural(list.length, 'activo fuera de servicio', 'activos fuera de servicio'),
+        list.length ? `<a href="#/inventario" class="link-btn" data-action="goto-status" data-status="Mantenimiento">Ver todos</a>` : '') +
+      `<div class="px-3 pb-3 pt-2">${list.length ? `<ul>${items}</ul>` : empty}</div>`;
+  }
+
+  function renderActivity() {
+    const rows = data.activity.slice(0, 6).map((ev) => {
+      const meta = ACTIVITY_META[ev.type] || ACTIVITY_META.sistema;
+      return `<li class="flex items-start gap-3 py-2.5">
+        <span class="mt-0.5 grid size-7 flex-none place-items-center rounded-full ${meta.tone}">${icon(meta.icon, 'h-3.5 w-3.5')}</span>
+        <p class="min-w-0 flex-1 text-[13.5px] leading-snug text-ink-2"><span class="font-medium text-ink">${esc(ev.actor)}</span> ${esc(ev.verb)} <span class="font-medium text-ink">${esc(ev.subject)}</span>${ev.extra ? ' ' + esc(ev.extra) : ''}</p>
+        <time class="flex-none whitespace-nowrap pt-0.5 text-xs text-ink-3">${esc(timeAgo(ev.ts))}</time>
+      </li>`;
+    }).join('');
+    $('#dash-activity').innerHTML = cardHead('Actividad reciente', 'Los últimos movimientos del inventario') +
+      `<div class="card-b pt-2">${rows ? `<ul class="divide-y divide-line">${rows}</ul>` : '<p class="py-3 text-[13px] text-ink-3">Todavía no hay movimientos. Registra o edita un activo y aparecerá aquí.</p>'}</div>`;
+  }
+
+  function renderLocationList() {
+    const rows = data.locations
+      .map((l) => ({ l, n: countBy('ubicacionId', l.id) }))
+      .sort((a, b) => b.n - a.n || collator.compare(a.l.nombre, b.l.nombre))
+      .slice(0, 5);
+    const max = Math.max(1, ...rows.map((r) => r.n));
+    const items = rows.map(({ l, n }) => `
+      <li><button type="button" class="block w-full rounded-lg px-2 py-2 text-left hover:bg-subtle" data-action="view-location" data-id="${l.id}">
+        <span class="flex items-baseline justify-between gap-3 text-[13.5px]">
+          <span class="min-w-0 truncate"><span class="font-medium">${esc(l.nombre)}</span> <span class="text-xs text-ink-3">${esc(l.bloque)}</span></span>
+          <span class="tnum flex-none font-medium">${nf.format(n)}</span>
+        </span>
+        <span class="mt-1.5 block h-1 overflow-hidden rounded-full bg-subtle"><span class="block h-full rounded-full" style="width:${Math.round((n / max) * 100)}%;background:var(--bar)"></span></span>
+      </button></li>`).join('');
+    $('#dash-locations').innerHTML =
+      cardHead('Ubicaciones con más activos', '', `<a href="#/ubicaciones" class="link-btn">Ver todas</a>`) +
+      `<div class="px-3 pb-3 pt-2">${items ? `<ul>${items}</ul>` : '<p class="px-2 py-3 text-[13px] text-ink-3">Aún no hay ubicaciones.</p>'}</div>`;
+  }
+
+  /* ==========================================================
+     8. VISTA: INVENTARIO DE ACTIVOS
+     ========================================================== */
+  const COLS = [
+    { key: 'codigo', label: 'Código' },
+    { key: 'nombre', label: 'Activo' },
+    { key: 'categoria', label: 'Categoría' },
+    { key: 'ubicacion', label: 'Ubicación' },
+    { key: 'responsable', label: 'Responsable' },
+    { key: 'estado', label: 'Estado' }
+  ];
+
+  function syncSearchInputs() {
+    ['#global-search', '#inv-search'].forEach((sel) => {
+      const el = $(sel);
+      if (el.value !== ui.query) el.value = ui.query;
+    });
+    $('#global-search-clear').hidden = !ui.query;
+    $('#global-search-kbd').hidden = !!ui.query;
+    $('#inv-search-clear').hidden = !ui.query;
+  }
+
+  function renderInventory() {
+    const cats = data.categories;
+    $('#inv-category').innerHTML = `<option value="all">Todas las categorías</option>` +
+      cats.map((c) => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    if (ui.category !== 'all' && !byId(cats, ui.category)) ui.category = 'all';
+    if (ui.location !== 'all' && !byId(data.locations, ui.location)) ui.location = 'all';
+    $('#inv-category').value = String(ui.category);
+    $('#inv-subtitle').textContent = `${plural(data.assets.length, 'activo', 'activos')} en ${plural(cats.length, 'categoría', 'categorías')} y ${plural(data.locations.length, 'ubicación', 'ubicaciones')}`;
+    syncSearchInputs();
+    renderInventoryResults();
+  }
+
+  function renderChips() {
+    const base = statusCounts(filteredAssets({ ignoreStatus: true }));
+    const chip = (key, label, n) => `<button type="button" data-action="status-filter" data-status="${esc(key)}" aria-pressed="${ui.status === key}">${esc(label)}<span class="n">${nf.format(n)}</span></button>`;
+    $('#inv-chips').innerHTML = chip('all', 'Todos', base.total) + ESTADOS.map((e) => chip(e, ESTADO[e].label, base[e])).join('');
+  }
+
+  function renderActiveFilters() {
+    const loc = ui.location !== 'all' ? byId(data.locations, ui.location) : null;
+    const any = ui.query || ui.category !== 'all' || ui.location !== 'all' || ui.status !== 'all';
+    const box = $('#inv-filters-active');
+    box.hidden = !any;
+    if (!any) { box.innerHTML = ''; return; }
+    box.innerHTML = (loc ? `<span class="inline-flex items-center gap-1 rounded-md border border-line bg-subtle py-0.5 pl-2 pr-0.5 text-[13px]">
+        <span class="text-ink-3">Ubicación:</span> <span class="font-medium">${esc(loc.nombre)}</span>
+        <button type="button" class="icon-btn !h-5 !w-5" data-action="clear-location" aria-label="Quitar filtro de ubicación">${icon('x', 'h-3 w-3')}</button></span>` : '') +
+      `<button type="button" class="link-btn" data-action="clear-filters">Limpiar filtros</button>`;
+  }
+
+  function renderThead() {
+    $('#inv-thead').innerHTML = `<tr>${COLS.map((c) => {
+      const active = ui.sort.key === c.key;
+      const ariaSort = active ? (ui.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+      const ic = active ? (ui.sort.dir === 'asc' ? 'arrow-up' : 'arrow-down') : 'chevrons-up-down';
+      return `<th scope="col" aria-sort="${ariaSort}"><button type="button" class="sort-btn" data-action="sort" data-sort="${c.key}">${esc(c.label)}${icon(ic)}</button></th>`;
+    }).join('')}<th scope="col" class="w-14"><span class="sr-only">Acciones</span></th></tr>`;
+  }
+
+  const menuBtn = (a) => `<button type="button" class="icon-btn" data-action="row-menu" data-id="${a.id}" aria-haspopup="menu" aria-expanded="false" aria-label="Acciones para ${esc(a.nombre)}">${icon('ellipsis')}</button>`;
+
+  function responsableCell(usr, terms) {
+    return usr
+      ? `<span class="flex min-w-0 items-center gap-2" title="${esc(usr.nombre)}, ${esc(usr.cargo)}">${avatar(usr)}<span class="truncate">${hl(usr.nombre, terms)}</span></span>`
+      : `<span class="text-ink-3">Sin asignar</span>`;
+  }
+
+  function rowHTML(a, terms) {
+    const cat = catOf(a);
+    const loc = locOf(a);
+    const usr = userOf(a);
+    return `<tr data-id="${a.id}">
+      <td><span class="code">${hl(a.codigo, terms)}</span></td>
+      <td><p class="truncate font-medium" title="${esc(a.nombre)}">${hl(a.nombre, terms)}</p>${a.descripcion ? `<p class="sub truncate" title="${esc(a.descripcion)}">${hl(a.descripcion, terms)}</p>` : ''}</td>
+      <td><p class="truncate text-ink-2" title="${esc(cat ? cat.nombre : '')}">${hl(cat ? cat.nombre : 'Sin categoría', terms)}</p></td>
+      <td><p class="truncate" title="${esc(loc ? loc.nombre : '')}">${hl(loc ? loc.nombre : 'Sin ubicación', terms)}</p>${loc ? `<p class="sub truncate">${hl(loc.bloque, terms)}</p>` : ''}</td>
+      <td>${responsableCell(usr, terms)}</td>
+      <td>${badge(a.estado)}</td>
+      <td class="text-right">${menuBtn(a)}</td>
+    </tr>`;
+  }
+
+  function cardHTML(a, terms) {
+    const cat = catOf(a);
+    const loc = locOf(a);
+    const usr = userOf(a);
+    return `<article class="p-4" data-id="${a.id}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="mb-2 flex flex-wrap items-center gap-2"><span class="code">${hl(a.codigo, terms)}</span>${badge(a.estado)}</div>
+          <p class="font-medium">${hl(a.nombre, terms)}</p>
+          ${a.descripcion ? `<p class="sub mt-0.5 line-clamp-2">${hl(a.descripcion, terms)}</p>` : ''}
+        </div>
+        <span class="-mr-2 -mt-1">${menuBtn(a)}</span>
+      </div>
+      <div class="mt-3 space-y-1.5 text-[13px] text-ink-2">
+        <p class="flex items-center gap-2">${icon('tag', 'h-3.5 w-3.5 text-ink-3')}${hl(cat ? cat.nombre : 'Sin categoría', terms)}</p>
+        <p class="flex items-center gap-2">${icon('map-pin', 'h-3.5 w-3.5 text-ink-3')}${hl(loc ? `${loc.nombre}, ${loc.bloque}` : 'Sin ubicación', terms)}</p>
+        <p class="flex items-center gap-2">${icon('user', 'h-3.5 w-3.5 text-ink-3')}${usr ? hl(usr.nombre, terms) : '<span class="text-ink-3">Sin asignar</span>'}</p>
+      </div>
+    </article>`;
+  }
+
+  function pageWindow(page, pages) {
+    const set = new Set([1, pages, page - 1, page, page + 1]);
+    const list = [...set].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+    const out = [];
+    list.forEach((n, i) => {
+      if (i && n - list[i - 1] > 1) out.push('…');
+      out.push(n);
+    });
+    return out;
+  }
+
+  function pagerHTML(page, pages) {
+    if (pages <= 1) return '';
+    const nums = pageWindow(page, pages).map((n) => (n === '…'
+      ? `<span class="px-1 text-ink-3" aria-hidden="true">…</span>`
+      : `<button type="button" class="pg" data-action="page" data-page="${n}" ${n === page ? 'aria-current="page"' : ''} aria-label="Página ${n}">${n}</button>`)).join('');
+    return `<button type="button" class="icon-btn" data-action="page" data-page="${page - 1}" aria-label="Página anterior" ${page === 1 ? 'disabled' : ''}>${icon('chevron-left')}</button>${nums}<button type="button" class="icon-btn" data-action="page" data-page="${page + 1}" aria-label="Página siguiente" ${page === pages ? 'disabled' : ''}>${icon('chevron-right')}</button>`;
+  }
+
+  // Se llama en cada pulsación del buscador: solo redibuja filtros y filas
+  function renderInventoryResults() {
+    renderChips();
+    renderActiveFilters();
+    renderThead();
+
+    const terms = queryTerms();
+    const all = sortAssets(filteredAssets());
+    const total = all.length;
+    const pages = Math.max(1, Math.ceil(total / prefs.pageSize));
+    ui.page = Math.min(Math.max(1, ui.page), pages);
+    const start = (ui.page - 1) * prefs.pageSize;
+    const slice = all.slice(start, start + prefs.pageSize);
+
+    $('#inv-tbody').innerHTML = slice.map((a) => rowHTML(a, terms)).join('');
+    $('#inv-cards').innerHTML = slice.map((a) => cardHTML(a, terms)).join('');
+
+    const empty = $('#inv-empty');
+    const hasRows = total > 0;
+    $('#inv-table-wrap').hidden = !hasRows;
+    $('#inv-cards').hidden = !hasRows;
+    $('#inv-foot').hidden = !hasRows;
+    empty.hidden = hasRows;
+
+    if (!hasRows) {
+      if (!data.assets.length) {
+        empty.innerHTML = `<span class="mb-3 grid size-11 place-items-center rounded-full bg-subtle text-ink-3">${icon('package', 'h-5 w-5')}</span>
+          <p class="text-sm font-medium">Tu inventario está vacío</p>
+          <p class="mt-1 max-w-sm text-[13px] text-ink-3">Registra el primer activo para empezar a llevar el control de los bienes de la institución.</p>
+          <button type="button" class="btn btn-primary mt-4" data-action="new-asset">${icon('plus')}Nuevo activo</button>`;
+      } else {
+        const q = ui.query.trim();
+        empty.innerHTML = `<span class="mb-3 grid size-11 place-items-center rounded-full bg-subtle text-ink-3">${icon('search', 'h-5 w-5')}</span>
+          <p class="text-sm font-medium">No hay activos que coincidan</p>
+          <p class="mt-1 max-w-sm text-[13px] text-ink-3">${q ? `No encontramos resultados para “${esc(q)}”. Revisa la ortografía o prueba con otro término.` : 'Cambia los filtros para ver más resultados.'}</p>
+          <button type="button" class="btn btn-secondary mt-4" data-action="clear-filters">Limpiar filtros</button>`;
+      }
+    } else {
+      $('#inv-foot-info').textContent = `Mostrando ${nf.format(start + 1)}–${nf.format(start + slice.length)} de ${plural(total, 'activo', 'activos')}`;
+      $('#inv-pager').innerHTML = pagerHTML(ui.page, pages);
+    }
+    refreshIcons();
+  }
+
+  /* ==========================================================
+     9. VISTA: CATEGORÍAS
+     ========================================================== */
+  function renderCategories() {
+    const total = data.assets.length;
+    $('#cat-subtitle').textContent = `${plural(data.categories.length, 'categoría', 'categorías')} para clasificar ${plural(total, 'activo', 'activos')}`;
+    const cards = data.categories.map((c) => {
+      const n = countBy('categoriaId', c.id);
+      const share = pct(n, total);
+      return `<article class="card flex flex-col p-5">
+        <div class="flex items-start justify-between">
+          <span class="grid size-10 place-items-center rounded-lg bg-accent-soft text-accent-fg">${icon(c.icono || 'tag', 'h-5 w-5')}</span>
+          <span class="-mr-2 -mt-1 flex gap-0.5">
+            <button type="button" class="icon-btn" data-action="edit-category" data-id="${c.id}" aria-label="Editar ${esc(c.nombre)}">${icon('pencil')}</button>
+            <button type="button" class="icon-btn is-danger" data-action="delete-category" data-id="${c.id}" aria-label="Eliminar ${esc(c.nombre)}">${icon('trash-2')}</button>
+          </span>
+        </div>
+        <h3 class="mt-4 text-[15px] font-semibold tracking-tight">${esc(c.nombre)}</h3>
+        <p class="mt-1 line-clamp-2 min-h-[2.5rem] text-[13px] text-ink-3">${esc(c.descripcion || 'Sin descripción')}</p>
+        <div class="mt-4">
+          <div class="flex items-baseline justify-between">
+            <span class="text-xl font-semibold tracking-tight">${nf.format(n)}</span>
+            <span class="text-[13px] text-ink-3">${n === 1 ? 'activo' : 'activos'}, ${share}% del total</span>
+          </div>
+          <div class="mt-2 h-1 overflow-hidden rounded-full bg-subtle"><div class="h-full rounded-full" style="width:${share}%;background:var(--bar)"></div></div>
+        </div>
+        <button type="button" class="link-btn mt-4 self-start" data-action="view-category" data-id="${c.id}">Ver activos</button>
+      </article>`;
+    }).join('');
+    $('#cat-grid').innerHTML = cards || `<div class="card col-span-full flex flex-col items-center px-6 py-14 text-center">
+        <span class="mb-3 grid size-11 place-items-center rounded-full bg-subtle text-ink-3">${icon('tags', 'h-5 w-5')}</span>
+        <p class="text-sm font-medium">Aún no hay categorías</p>
+        <p class="mt-1 max-w-sm text-[13px] text-ink-3">Crea la primera para empezar a clasificar los activos.</p>
+        <button type="button" class="btn btn-primary mt-4" data-action="new-category">${icon('plus')}Nueva categoría</button></div>`;
+    refreshIcons();
+  }
+
+  /* ==========================================================
+     10. VISTA: UBICACIONES (agrupadas por bloque)
+     ========================================================== */
+  function renderLocations() {
+    const total = data.assets.length;
+    const blocks = new Set(data.locations.map((l) => l.bloque));
+    $('#loc-subtitle').textContent = `${plural(data.locations.length, 'ubicación', 'ubicaciones')} en ${plural(blocks.size, 'bloque', 'bloques')}`;
+    const groups = {};
+    data.locations.forEach((l) => { (groups[l.bloque] = groups[l.bloque] || []).push(l); });
+    const html = Object.keys(groups).sort((a, b) => collator.compare(a, b)).map((bloque) => {
+      const items = groups[bloque].sort((a, b) => collator.compare(a.nombre, b.nombre));
+      const subtotal = items.reduce((s, l) => s + countBy('ubicacionId', l.id), 0);
+      return `<section aria-label="${esc(bloque)}">
+        <div class="mb-3 flex items-center gap-2">
+          ${icon('building-2', 'h-4 w-4 text-ink-3')}
+          <h3 class="text-sm font-semibold tracking-tight">${esc(bloque)}</h3>
+          <span class="text-[13px] text-ink-3">${plural(subtotal, 'activo', 'activos')}</span>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">${items.map((l) => {
+          const n = countBy('ubicacionId', l.id);
+          return `<article class="card flex flex-col p-5">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <h4 class="truncate text-[15px] font-semibold tracking-tight">${esc(l.nombre)}</h4>
+                <p class="mt-1 line-clamp-2 min-h-[2.5rem] text-[13px] text-ink-3">${esc(l.descripcion || 'Sin descripción')}</p>
+              </div>
+              <span class="-mr-2 -mt-1 flex flex-none gap-0.5">
+                <button type="button" class="icon-btn" data-action="edit-location" data-id="${l.id}" aria-label="Editar ${esc(l.nombre)}">${icon('pencil')}</button>
+                <button type="button" class="icon-btn is-danger" data-action="delete-location" data-id="${l.id}" aria-label="Eliminar ${esc(l.nombre)}">${icon('trash-2')}</button>
+              </span>
+            </div>
+            <div class="mt-4 flex items-end justify-between">
+              <div><span class="text-xl font-semibold tracking-tight">${nf.format(n)}</span> <span class="text-[13px] text-ink-3">${n === 1 ? 'activo' : 'activos'}</span></div>
+              <button type="button" class="link-btn" data-action="view-location" data-id="${l.id}">Ver activos</button>
+            </div>
+            <div class="mt-2 h-1 overflow-hidden rounded-full bg-subtle"><div class="h-full rounded-full" style="width:${pct(n, total)}%;background:var(--bar)"></div></div>
+          </article>`;
+        }).join('')}</div>
+      </section>`;
+    }).join('');
+    $('#loc-groups').innerHTML = html || `<div class="card flex flex-col items-center px-6 py-14 text-center">
+        <span class="mb-3 grid size-11 place-items-center rounded-full bg-subtle text-ink-3">${icon('map-pin', 'h-5 w-5')}</span>
+        <p class="text-sm font-medium">Aún no hay ubicaciones</p>
+        <p class="mt-1 max-w-sm text-[13px] text-ink-3">Crea la primera para indicar dónde está cada activo.</p>
+        <button type="button" class="btn btn-primary mt-4" data-action="new-location">${icon('plus')}Nueva ubicación</button></div>`;
+    refreshIcons();
+  }
+
+  /* ==========================================================
+     11. VISTA: REPORTES (descarga CSV + adquisiciones por mes)
+     ========================================================== */
+  const REPORTS = [
+    { id: 'completo', icon: 'file-spreadsheet', title: 'Inventario completo', desc: 'Todos los activos con categoría, ubicación, responsable y estado.', pick: () => true },
+    { id: 'en-uso', icon: 'user-check', title: 'Activos asignados', desc: 'Activos en uso, con el responsable que los tiene a cargo.', pick: (a) => a.estado === 'En Uso' },
+    { id: 'disponibles', icon: 'package-check', title: 'Activos disponibles', desc: 'Listos para asignar a un nuevo responsable.', pick: (a) => a.estado === 'Disponible' },
+    { id: 'mantenimiento', icon: 'wrench', title: 'Activos en mantenimiento', desc: 'Equipos fuera de servicio por revisión o reparación.', pick: (a) => a.estado === 'Mantenimiento' },
+    { id: 'bajas', icon: 'package-x', title: 'Activos dados de baja', desc: 'Bienes retirados del inventario, con su última ubicación.', pick: (a) => a.estado === 'Dado de baja' },
+    { id: 'por-ubicacion', icon: 'map-pin', title: 'Inventario por ubicación', desc: 'Ordenado por bloque y espacio, ideal para conteos físicos.', pick: () => true, order: (a, b) => collator.compare(`${(locOf(a) || {}).bloque} ${(locOf(a) || {}).nombre}`, `${(locOf(b) || {}).bloque} ${(locOf(b) || {}).nombre}`) || collator.compare(a.codigo, b.codigo) }
+  ];
+
+  function renderReports() {
+    $('#report-list').innerHTML = REPORTS.map((r) => {
+      const n = data.assets.filter(r.pick).length;
+      return `<article class="card flex flex-col p-5">
+        <span class="grid size-10 place-items-center rounded-lg bg-subtle text-ink-2">${icon(r.icon, 'h-5 w-5')}</span>
+        <h3 class="mt-4 text-[15px] font-semibold tracking-tight">${esc(r.title)}</h3>
+        <p class="mt-1 min-h-[2.5rem] text-[13px] text-ink-3">${esc(r.desc)}</p>
+        <div class="mt-4 flex items-center justify-between gap-3">
+          <span class="text-[13px] text-ink-3">${plural(n, 'registro', 'registros')}</span>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="download-report" data-report="${r.id}" ${n ? '' : 'disabled'}>${icon('download')}Descargar CSV</button>
+        </div>
+      </article>`;
+    }).join('');
+    renderAcquisitions();
+    refreshIcons();
+  }
+
+  // Columnas: adquisiciones de los últimos 6 meses. Se destaca el mes actual.
+  function renderAcquisitions() {
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ y: d.getFullYear(), m: d.getMonth(), n: 0, label: new Intl.DateTimeFormat('es-CO', { month: 'short' }).format(d).replace('.', ''), long: cap(new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(d)) });
+    }
+    data.assets.forEach((a) => {
+      const d = parseISO(a.fecha);
+      const slot = months.find((m) => m.y === d.getFullYear() && m.m === d.getMonth());
+      if (slot) slot.n += 1;
+    });
+    const total = months.reduce((s, m) => s + m.n, 0);
+    const max = Math.max(1, ...months.map((m) => m.n));
+    const H = 120;
+    const cols = months.map((m, i) => {
+      const h = m.n ? Math.max(4, Math.round((m.n / max) * H)) : 0;
+      return `<div class="col-wrap flex flex-1 flex-col items-center justify-end" tabindex="0" style="height:${H + 28}px"
+          data-tip-title="${esc(m.long)}" data-tip-text="${plural(m.n, 'activo adquirido', 'activos adquiridos')}" aria-label="${esc(m.long)}: ${plural(m.n, 'activo adquirido', 'activos adquiridos')}">
+          <span class="mb-1 text-[13px] font-medium tnum ${m.n ? '' : 'text-ink-3'}">${m.n}</span>
+          <div class="col-bar w-full max-w-6 ${i === months.length - 1 ? 'is-current' : ''}" style="height:${h}px"></div>
+        </div>`;
+    }).join('');
+    const labels = months.map((m) => `<span class="flex-1 text-center text-xs text-ink-3">${esc(m.label)}</span>`).join('');
+    $('#acq-chart').innerHTML = cardHead('Adquisiciones por mes', `${plural(total, 'activo adquirido', 'activos adquiridos')} en los últimos 6 meses`) +
+      `<div class="card-b pt-5"><div class="flex items-end gap-3 border-b border-line">${cols}</div><div class="mt-2 flex gap-3">${labels}</div></div>`;
+  }
+
+  /* ==========================================================
+     12. VISTA: CONFIGURACIÓN
+     ========================================================== */
+  function renderSettingsControls() {
+    $$('#set-theme [data-theme]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === prefs.theme)));
+    $$('#set-density [data-density]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.density === prefs.density)));
+    $('#set-pagesize').value = String(prefs.pageSize);
+  }
+  function renderSettings() {
+    renderSettingsControls();
+    $('#set-institucion').value = prefs.institucion;
+    $('#set-institucion-err').textContent = '';
+    refreshIcons();
+  }
+
+  /* ==========================================================
+     13. NOTIFICACIONES (toasts)
+     ========================================================== */
+  const toastsEl = $('#toasts');
+
+  function toast({ message, detail = '', tone = 'success', action = null, duration }) {
+    const tones = {
+      success: ['circle-check', 'text-emerald-600 dark:text-emerald-400'],
+      error: ['circle-alert', 'text-red-600 dark:text-red-400'],
+      info: ['info', 'text-accent-fg']
+    };
+    const [ic, cls] = tones[tone] || tones.success;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.innerHTML = `<span class="mt-0.5 ${cls}">${icon(ic, 'h-[18px] w-[18px]')}</span>
+      <div class="min-w-0 flex-1"><p class="t-msg text-[13.5px] font-medium leading-snug"></p>${detail ? '<p class="t-det mt-0.5 text-[13px] leading-snug text-ink-3"></p>' : ''}</div>
+      ${action ? '<button type="button" class="toast-action"></button>' : ''}
+      <button type="button" class="icon-btn t-close -my-0.5 !h-7 !w-7" aria-label="Cerrar notificación">${icon('x')}</button>`;
+    $('.t-msg', el).textContent = message;
+    if (detail) $('.t-det', el).textContent = detail;
+
+    let timer = null;
+    const dismiss = () => {
+      clearTimeout(timer);
+      if (!el.isConnected || el.classList.contains('is-leaving')) return;
+      el.classList.add('is-leaving');
+      setTimeout(() => el.remove(), 180);
+    };
+    const start = () => { timer = setTimeout(dismiss, duration || (action ? 7000 : 4500)); };
+
+    if (action) {
+      const btn = $('.toast-action', el);
+      btn.textContent = action.label;
+      btn.addEventListener('click', () => { action.run(); dismiss(); });
+    }
+    $('.t-close', el).addEventListener('click', dismiss);
+    el.addEventListener('mouseenter', () => clearTimeout(timer));
+    el.addEventListener('mouseleave', start);
+
+    toastsEl.appendChild(el);
+    while (toastsEl.children.length > 3) toastsEl.firstElementChild.remove();
+    refreshIcons();
+    start();
+  }
+
+  /* ==========================================================
+     14. MENÚS FLOTANTES Y TOOLTIPS
+     ========================================================== */
+  const menuEl = $('#menu');
+  let menuAnchor = null;
+
+  function openMenu(anchor, html, align = 'right') {
+    closeMenu();
+    menuEl.innerHTML = html;
+    menuEl.hidden = false;
+    menuAnchor = anchor;
+    anchor.setAttribute('aria-expanded', 'true');
+    refreshIcons();
+    const r = anchor.getBoundingClientRect();
+    const w = menuEl.offsetWidth;
+    const h = menuEl.offsetHeight;
+    let left = align === 'right' ? r.right - w : r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    let top = r.bottom + 6;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+    menuEl.style.left = left + 'px';
+    menuEl.style.top = top + 'px';
+    const first = $('[role="menuitem"]', menuEl);
+    if (first) first.focus();
+  }
+
+  function closeMenu(restoreFocus = false) {
+    if (menuEl.hidden) return;
+    menuEl.hidden = true;
+    menuEl.innerHTML = '';
+    if (menuAnchor) {
+      menuAnchor.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) menuAnchor.focus();
+      menuAnchor = null;
+    }
+  }
+
+  menuEl.addEventListener('keydown', (e) => {
+    const items = $$('[role="menuitem"]', menuEl);
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+    else if (e.key === 'Tab') closeMenu();
+  });
+
+  const rowMenuHTML = (id) => `
+    <button type="button" role="menuitem" class="menu-item" data-action="edit-asset" data-id="${id}">${icon('pencil')}Editar</button>
+    <div class="menu-sep" role="separator"></div>
+    <button type="button" role="menuitem" class="menu-item is-danger" data-action="delete-asset" data-id="${id}">${icon('trash-2')}Eliminar</button>`;
+
+  const profileMenuHTML = () => `
+    <div class="px-2.5 pb-2 pt-1.5">
+      <p class="text-[13px] font-medium">${esc(PROFILE.nombre)}</p>
+      <p class="text-xs text-ink-3">${esc(PROFILE.email)}</p>
+    </div>
+    <div class="menu-sep" role="separator"></div>
+    <button type="button" role="menuitem" class="menu-item" data-action="goto-settings">${icon('settings')}Configuración</button>
+    <button type="button" role="menuitem" class="menu-item" data-action="logout">${icon('log-out')}Cerrar sesión</button>`;
+
+  const tipEl = $('#tip');
+  let tipTarget = null;
+
+  function placeTip(x, y) {
+    const w = tipEl.offsetWidth;
+    const h = tipEl.offsetHeight;
+    let left = x + 14;
+    let top = y + 16;
+    if (left + w > window.innerWidth - 8) left = x - w - 14;
+    if (top + h > window.innerHeight - 8) top = y - h - 12;
+    tipEl.style.left = Math.max(8, left) + 'px';
+    tipEl.style.top = Math.max(8, top) + 'px';
+  }
+  function showTip(target, x, y) {
+    tipTarget = target;
+    tipEl.innerHTML = '<strong></strong><span></span>';
+    tipEl.firstChild.textContent = target.dataset.tipTitle || '';
+    tipEl.lastChild.textContent = target.dataset.tipText || '';
+    tipEl.hidden = false;
+    placeTip(x, y);
+  }
+  function hideTip() {
+    tipEl.hidden = true;
+    tipTarget = null;
+  }
+
+  document.addEventListener('pointerover', (e) => {
+    if (e.pointerType === 'touch') return;
+    const t = e.target.closest && e.target.closest('[data-tip-title]');
+    if (t) showTip(t, e.clientX, e.clientY);
+  });
+  document.addEventListener('pointermove', (e) => { if (tipTarget && !tipEl.hidden && e.pointerType !== 'touch') placeTip(e.clientX, e.clientY); });
+  document.addEventListener('pointerout', (e) => {
+    const t = e.target.closest && e.target.closest('[data-tip-title]');
+    if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) hideTip();
+  });
+  document.addEventListener('focusin', (e) => {
+    const t = e.target.closest && e.target.closest('[data-tip-title]');
+    if (t && t.matches(':focus-visible')) {
+      const r = t.getBoundingClientRect();
+      showTip(t, r.left + Math.min(r.width / 2, 120), r.bottom - 6);
+    }
+  });
+  document.addEventListener('focusout', (e) => { if (e.target.closest && e.target.closest('[data-tip-title]')) hideTip(); });
+  window.addEventListener('scroll', () => { hideTip(); closeMenu(); }, { passive: true });
+
+  /* ==========================================================
+     15. DIÁLOGOS
+     ========================================================== */
+  function openDialog(dlg) {
+    dlg.returnValue = '';
+    if (!dlg.open) dlg.showModal();
+    document.body.classList.add('dialog-open');
+    closeMenu();
+    hideTip();
+  }
+
+  $$('dialog').forEach((dlg) => {
+    let downOnBackdrop = false;
+    dlg.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === dlg; });
+    dlg.addEventListener('click', (e) => { if (e.target === dlg && downOnBackdrop) dlg.close('cancel'); });
+    dlg.addEventListener('close', () => { if (!$$('dialog[open]').length) document.body.classList.remove('dialog-open'); });
+  });
+
+  function askConfirm({ title, body, confirmLabel = 'Eliminar', danger = true, iconName = 'trash-2' }) {
+    return new Promise((resolve) => {
+      const dlg = $('#confirm-dialog');
+      $('#confirm-title').textContent = title;
+      $('#confirm-body').innerHTML = body;
+      const ok = $('#confirm-ok');
+      ok.textContent = confirmLabel;
+      ok.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+      const ic = $('#confirm-icon');
+      ic.className = 'mb-3 grid size-10 place-items-center rounded-full ' + (danger ? 'bg-[rgb(var(--danger-soft))] text-[rgb(var(--danger))]' : 'bg-accent-soft text-accent-fg');
+      ic.innerHTML = icon(iconName, 'h-5 w-5');
+      refreshIcons();
+      const done = () => { dlg.removeEventListener('close', done); resolve(dlg.returnValue === 'ok'); };
+      dlg.addEventListener('close', done);
+      openDialog(dlg);
+    });
+  }
+
+  /* ==========================================================
+     16. FORMULARIO DE ACTIVO (agregar / editar)
+     ========================================================== */
+  const assetDlg = $('#asset-dialog');
+  const assetForm = $('#asset-form');
+  const F = {
+    codigo: $('#f-codigo'),
+    nombre: $('#f-nombre'),
+    descripcion: $('#f-descripcion'),
+    categoria: $('#f-categoria'),
+    ubicacion: $('#f-ubicacion'),
+    responsable: $('#f-responsable'),
+    fecha: $('#f-fecha')
+  };
+
+  function setFieldError(key, msg) {
+    $('#e-' + key).textContent = msg || '';
+    F[key].setAttribute('aria-invalid', msg ? 'true' : 'false');
+  }
+  const clearAssetErrors = () => Object.keys(F).forEach((k) => setFieldError(k, ''));
+
+  const getEstado = () => (assetForm.querySelector('input[name="estado"]:checked') || {}).value || 'Disponible';
+  const setEstado = (v) => $$('input[name="estado"]', assetForm).forEach((r) => { r.checked = r.value === v; });
+
+  function syncResponsable() {
+    const estado = getEstado();
+    const noAplica = estado === 'Disponible' || estado === 'Dado de baja';
+    F.responsable.disabled = noAplica;
+    if (noAplica) { F.responsable.value = ''; setFieldError('responsable', ''); }
+    $('#h-responsable').textContent = noAplica
+      ? 'No aplica para activos disponibles o dados de baja.'
+      : estado === 'En Uso' ? 'Obligatorio cuando el activo está en uso.' : 'Opcional: quien lo tiene a cargo durante el mantenimiento.';
+  }
+
+  function nextCode() {
+    let max = 0;
+    data.assets.forEach((a) => { const m = /^ACT-(\d+)$/i.exec(a.codigo); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+    const taken = new Set(data.assets.map((a) => a.codigo.toUpperCase()));
+    let n = max + 1;
+    let code = 'ACT-' + String(n).padStart(4, '0');
+    while (taken.has(code)) { n += 1; code = 'ACT-' + String(n).padStart(4, '0'); }
+    return code;
+  }
+
+  function fillAssetSelects() {
+    F.categoria.innerHTML = `<option value="">Selecciona una categoría</option>` +
+      data.categories.map((c) => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    const groups = {};
+    data.locations.forEach((l) => { (groups[l.bloque] = groups[l.bloque] || []).push(l); });
+    F.ubicacion.innerHTML = `<option value="">Selecciona una ubicación</option>` +
+      Object.keys(groups).sort(collator.compare).map((b) =>
+        `<optgroup label="${esc(b)}">${groups[b].sort((x, y) => collator.compare(x.nombre, y.nombre)).map((l) => `<option value="${l.id}">${esc(l.nombre)}</option>`).join('')}</optgroup>`).join('');
+    F.responsable.innerHTML = `<option value="">Sin asignar</option>` +
+      data.users.map((u) => `<option value="${u.id}">${esc(u.nombre)}, ${esc(u.cargo)}</option>`).join('');
+  }
+
+  function openAssetDialog(id = null) {
+    const a = id != null ? byId(data.assets, id) : null;
+    if (id != null && !a) return;
+    ui.editingId = a ? a.id : null;
+    fillAssetSelects();
+    clearAssetErrors();
+    $('#asset-dialog-title').textContent = a ? 'Editar activo' : 'Nuevo activo';
+    $('#asset-dialog-sub').textContent = a ? `Actualiza los datos de ${a.codigo}.` : 'Registra un bien en el inventario institucional.';
+    $('#asset-submit').textContent = a ? 'Guardar cambios' : 'Registrar activo';
+    F.codigo.value = a ? a.codigo : nextCode();
+    F.nombre.value = a ? a.nombre : '';
+    F.descripcion.value = a ? a.descripcion || '' : '';
+    F.categoria.value = a ? String(a.categoriaId) : (ui.category !== 'all' ? String(ui.category) : '');
+    F.ubicacion.value = a ? String(a.ubicacionId) : (ui.location !== 'all' ? String(ui.location) : '');
+    setEstado(a ? a.estado : 'Disponible');
+    F.responsable.value = a && a.responsableId ? String(a.responsableId) : '';
+    F.fecha.max = todayISO();
+    F.fecha.value = a ? a.fecha : todayISO();
+    syncResponsable();
+    openDialog(assetDlg);
+    refreshIcons();
+  }
+
+  function validateAsset(v) {
+    const errors = {};
+    const code = v.codigo.trim().toUpperCase();
+    if (!code) errors.codigo = 'Ingresa un código único.';
+    else if (!/^[A-Z0-9][A-Z0-9._-]*$/.test(code)) errors.codigo = 'Usa solo letras, números, guiones o puntos.';
+    else if (data.assets.some((a) => a.id !== ui.editingId && a.codigo.toUpperCase() === code)) errors.codigo = `Ya existe un activo con el código ${code}.`;
+    if (!v.nombre.trim()) errors.nombre = 'Ingresa el nombre del activo.';
+    if (!v.categoria) errors.categoria = data.categories.length ? 'Selecciona una categoría.' : 'Crea una categoría antes de registrar activos.';
+    if (!v.ubicacion) errors.ubicacion = data.locations.length ? 'Selecciona una ubicación.' : 'Crea una ubicación antes de registrar activos.';
+    if (v.estado === 'En Uso' && !v.responsable) errors.responsable = 'Asigna un responsable para marcar el activo como en uso.';
+    if (!v.fecha) errors.fecha = 'Ingresa la fecha de adquisición.';
+    else if (v.fecha > todayISO()) errors.fecha = 'La fecha no puede ser futura.';
+    return errors;
+  }
+
+  assetForm.addEventListener('change', (e) => { if (e.target.name === 'estado') syncResponsable(); });
+  assetForm.addEventListener('input', (e) => {
+    const key = Object.keys(F).find((k) => F[k] === e.target);
+    if (key && e.target.getAttribute('aria-invalid') === 'true') setFieldError(key, '');
+  });
+
+  assetForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = {
+      codigo: F.codigo.value, nombre: F.nombre.value, descripcion: F.descripcion.value,
+      categoria: F.categoria.value, ubicacion: F.ubicacion.value, estado: getEstado(),
+      responsable: F.responsable.value, fecha: F.fecha.value
+    };
+    const errors = validateAsset(v);
+    Object.keys(F).forEach((k) => setFieldError(k, errors[k] || ''));
+    const firstBad = Object.keys(F).find((k) => errors[k]);
+    if (firstBad) { F[firstBad].focus(); return; }
+
+    const payload = {
+      codigo: v.codigo.trim().toUpperCase(),
+      nombre: v.nombre.trim(),
+      descripcion: v.descripcion.trim(),
+      categoriaId: Number(v.categoria),
+      ubicacionId: Number(v.ubicacion),
+      responsableId: v.responsable ? Number(v.responsable) : null,
+      estado: v.estado,
+      fecha: v.fecha
+    };
+
+    if (ui.editingId == null) {
+      const asset = Object.assign({ id: data.seq.asset++ }, payload);
+      data.assets.push(asset);
+      logActivity('alta', 'registró', asset.nombre);
+      toast({ message: 'Activo registrado', detail: `${asset.codigo} se agregó al inventario.` });
+    } else {
+      const asset = byId(data.assets, ui.editingId);
+      const before = Object.assign({}, asset);
+      Object.assign(asset, payload);
+      const usr = userOf(asset);
+      if (before.estado !== asset.estado) {
+        const map = {
+          'Mantenimiento': ['mantenimiento', 'envió a mantenimiento'],
+          'Disponible': ['disponible', 'dejó disponible'],
+          'Dado de baja': ['baja', 'dio de baja'],
+          'En Uso': ['asignacion', 'puso en uso']
+        };
+        const [type, verb] = map[asset.estado];
+        logActivity(type, verb, asset.nombre, asset.estado === 'En Uso' && usr ? `a cargo de ${usr.nombre}` : '');
+      } else if (before.responsableId !== asset.responsableId) {
+        if (usr) logActivity('asignacion', 'asignó', asset.nombre, `a ${usr.nombre}`);
+        else logActivity('disponible', 'liberó', asset.nombre);
+      } else {
+        logActivity('edicion', 'actualizó', asset.nombre);
+      }
+      toast({ message: 'Cambios guardados', detail: `${asset.codigo} se actualizó.` });
+    }
+    persist();
+    assetDlg.close('saved');
+    renderAll();
+  });
+
+  async function deleteAsset(id) {
+    const a = byId(data.assets, id);
+    if (!a) return;
+    const ok = await askConfirm({
+      title: '¿Eliminar este activo?',
+      body: `Se quitará <strong class="font-medium text-ink">${esc(a.nombre)}</strong> (<span class="code">${esc(a.codigo)}</span>) del inventario.`,
+      confirmLabel: 'Eliminar activo'
+    });
+    if (!ok) return;
+
+    try {
+      // 🚀 Petición DELETE a tu backend de FastAPI para borrarlo en MySQL
+      const response = await fetch(`http://127.0.0.1:8000/activos/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error("El servidor no pudo eliminar el registro");
+      }
+
+      // Si el servidor responde correctamente, lo retiramos del arreglo local
+      const index = data.assets.findIndex((x) => x.id === id);
+      const removed = data.assets.splice(index, 1)[0];
+      logActivity('eliminacion', 'eliminó', removed.nombre);
+      
+      persist();
+      renderAll();
+      
+      toast({
+        message: 'Activo eliminado',
+        detail: `${removed.codigo} fue borrado de la base de datos.`
+      });
+
+    } catch (error) {
+      console.error("Error al conectar con el backend para eliminar:", error);
+      toast({
+        message: 'Error al eliminar',
+        detail: 'No se pudo conectar con el servidor de FastAPI.',
+        tone: 'error'
+      });
+    }
+  }
+
+  /* ==========================================================
+     17. CATEGORÍAS Y UBICACIONES (alta, edición y baja)
+     ========================================================== */
+  const entityDlg = $('#entity-dialog');
+  const entityForm = $('#entity-form');
+
+  function openEntityDialog(type, id = null) {
+    const isCat = type === 'category';
+    const item = id != null ? byId(isCat ? data.categories : data.locations, id) : null;
+    if (id != null && !item) return;
+    ui.entity = { type, id: item ? item.id : null };
+    $('#entity-title').textContent = (item ? 'Editar ' : 'Nueva ') + (isCat ? 'categoría' : 'ubicación');
+    $('#entity-submit').textContent = item ? 'Guardar cambios' : isCat ? 'Crear categoría' : 'Crear ubicación';
+
+    const blocks = [...new Set(data.locations.map((l) => l.bloque))].sort(collator.compare);
+    $('#entity-fields').innerHTML = `
+      <div>
+        <label for="n-nombre" class="label">${isCat ? 'Nombre' : 'Espacio'}</label>
+        <input id="n-nombre" class="field" type="text" maxlength="100" autocomplete="off" placeholder="${isCat ? 'Ej.: Vehículos' : 'Ej.: Sala de profesores'}" aria-describedby="ne-nombre" value="${esc(item ? item.nombre : '')}" autofocus>
+        <p id="ne-nombre" class="err" role="alert"></p>
+      </div>
+      ${isCat ? '' : `<div>
+        <label for="n-bloque" class="label">Edificio o bloque</label>
+        <input id="n-bloque" class="field" type="text" maxlength="50" autocomplete="off" list="dl-bloques" placeholder="Ej.: Bloque A" aria-describedby="ne-bloque" value="${esc(item ? item.bloque : '')}">
+        <datalist id="dl-bloques">${blocks.map((b) => `<option value="${esc(b)}"></option>`).join('')}</datalist>
+        <p id="ne-bloque" class="err" role="alert"></p>
+      </div>`}
+      <div>
+        <label for="n-descripcion" class="label">Descripción <span class="opt">(opcional)</span></label>
+        <textarea id="n-descripcion" class="field" rows="3" maxlength="255" placeholder="${isCat ? 'Qué tipo de activos incluye' : 'Para qué se usa este espacio'}">${esc(item ? item.descripcion || '' : '')}</textarea>
+      </div>`;
+    openDialog(entityDlg);
+  }
+
+  function setEntityError(key, msg) {
+    const err = $('#ne-' + key);
+    const input = $('#n-' + key);
+    if (err) err.textContent = msg || '';
+    if (input) input.setAttribute('aria-invalid', msg ? 'true' : 'false');
+  }
+
+  entityForm.addEventListener('input', (e) => {
+    if (e.target.getAttribute && e.target.getAttribute('aria-invalid') === 'true') setEntityError(e.target.id.replace('n-', ''), '');
+  });
+
+  entityForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const { type, id } = ui.entity;
+    const isCat = type === 'category';
+    const nombre = $('#n-nombre').value.trim();
+    const bloque = isCat ? '' : $('#n-bloque').value.trim();
+    const descripcion = $('#n-descripcion').value.trim();
+    const errors = {};
+    if (!nombre) errors.nombre = isCat ? 'Ingresa el nombre de la categoría.' : 'Ingresa el nombre del espacio.';
+    if (!isCat && !bloque) errors.bloque = 'Ingresa el edificio o bloque.';
+    if (!errors.nombre) {
+      const dup = isCat
+        ? data.categories.some((c) => c.id !== id && fold(c.nombre) === fold(nombre))
+        : data.locations.some((l) => l.id !== id && fold(l.nombre) === fold(nombre) && fold(l.bloque) === fold(bloque));
+      if (dup) errors.nombre = isCat ? 'Ya existe una categoría con ese nombre.' : 'Ya existe ese espacio en el mismo bloque.';
+    }
+    ['nombre', 'bloque'].forEach((k) => setEntityError(k, errors[k] || ''));
+    const bad = ['nombre', 'bloque'].find((k) => errors[k]);
+    if (bad) { $('#n-' + bad).focus(); return; }
+
+    if (isCat) {
+      if (id == null) {
+        data.categories.push({ id: data.seq.category++, nombre, descripcion, icono: 'tag' });
+        logActivity('sistema', 'creó la categoría', nombre);
+        toast({ message: 'Categoría creada', detail: nombre });
+      } else {
+        Object.assign(byId(data.categories, id), { nombre, descripcion });
+        toast({ message: 'Cambios guardados', detail: nombre });
+      }
+    } else if (id == null) {
+      data.locations.push({ id: data.seq.location++, nombre, bloque, descripcion });
+      logActivity('sistema', 'creó la ubicación', nombre);
+      toast({ message: 'Ubicación creada', detail: `${nombre}, ${bloque}` });
+    } else {
+      Object.assign(byId(data.locations, id), { nombre, bloque, descripcion });
+      toast({ message: 'Cambios guardados', detail: `${nombre}, ${bloque}` });
+    }
+    persist();
+    entityDlg.close('saved');
+    renderAll();
+  });
+
+  async function deleteEntity(type, id) {
+    const isCat = type === 'category';
+    const list = isCat ? data.categories : data.locations;
+    const item = byId(list, id);
+    if (!item) return;
+    const n = countBy(isCat ? 'categoriaId' : 'ubicacionId', id);
+    if (n > 0) {
+      toast({
+        tone: 'error',
+        message: `No se puede eliminar ${isCat ? 'la categoría' : 'la ubicación'}`,
+        detail: `Tiene ${plural(n, 'activo', 'activos')}. Muévelos a otra ${isCat ? 'categoría' : 'ubicación'} primero.`,
+        action: { label: 'Ver activos', run: () => goInventory(isCat ? { category: id } : { location: id }) }
+      });
+      return;
+    }
+    const ok = await askConfirm({
+      title: `¿Eliminar ${isCat ? 'la categoría' : 'la ubicación'}?`,
+      body: `Se eliminará <strong class="font-medium text-ink">${esc(item.nombre)}</strong>. No tiene activos asociados.`,
+      confirmLabel: isCat ? 'Eliminar categoría' : 'Eliminar ubicación'
+    });
+    if (!ok) return;
+    const index = list.findIndex((x) => x.id === id);
+    const removed = list.splice(index, 1)[0];
+    persist();
+    renderAll();
+    toast({
+      message: isCat ? 'Categoría eliminada' : 'Ubicación eliminada',
+      detail: removed.nombre,
+      action: {
+        label: 'Deshacer',
+        run: () => { list.splice(Math.min(index, list.length), 0, removed); persist(); renderAll(); toast({ message: isCat ? 'Categoría restaurada' : 'Ubicación restaurada', detail: removed.nombre }); }
+      }
+    });
+  }
+
+  /* ==========================================================
+     18. EXPORTACIÓN (CSV y respaldo JSON)
+     ========================================================== */
+  const csvCell = (v) => {
+    const s = String(v ?? '');
+    return /[";\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  function assetsToCSV(list) {
+    const head = ['Código', 'Activo', 'Descripción', 'Categoría', 'Ubicación', 'Bloque', 'Responsable', 'Estado', 'Fecha de adquisición'];
+    const rows = list.map((a) => {
+      const c = catOf(a);
+      const l = locOf(a);
+      const u = userOf(a);
+      return [a.codigo, a.nombre, a.descripcion, c ? c.nombre : '', l ? l.nombre : '', l ? l.bloque : '', u ? u.nombre : '', (ESTADO[a.estado] || {}).label || a.estado, a.fecha];
+    });
+    // BOM + separador ";" para que Excel en español lo abra con tildes y columnas
+    return '﻿' + [head].concat(rows).map((r) => r.map(csvCell).join(';')).join('\r\n');
+  }
+
+  function download(filename, content, type) {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  const slug = (s) => fold(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'inventario';
+
+  function exportList(list, name) {
+    const file = `${name}-${todayISO()}.csv`;
+    download(file, assetsToCSV(list), 'text/csv;charset=utf-8');
+    toast({ message: 'Exportación lista', detail: `${plural(list.length, 'activo', 'activos')} en ${file}`, tone: 'info' });
+  }
+
+  function exportInventory() {
+    const filtered = currentView === 'inventario';
+    const list = sortAssets(filtered ? filteredAssets() : data.assets);
+    if (!list.length) { toast({ tone: 'error', message: 'No hay activos para exportar', detail: 'Cambia los filtros e inténtalo de nuevo.' }); return; }
+    exportList(list, `inventario-${slug(prefs.institucion)}${filtered && list.length !== data.assets.length ? '-filtrado' : ''}`);
+  }
+
+  /* ==========================================================
+     19. BÚSQUEDA Y FILTROS
+     ========================================================== */
+  function setQuery(value) {
+    ui.query = value;
+    ui.page = 1;
+    syncSearchInputs();
+    // Se decide según la URL (no según la vista pintada) para no perder una navegación en curso
+    if (currentRoute() !== 'inventario') navigate('inventario');
+    else renderInventoryResults();
+  }
+
+  function focusSearch() {
+    const el = currentView === 'inventario' && window.matchMedia('(min-width: 768px)').matches ? $('#inv-search') : $('#global-search');
+    el.focus();
+    el.select();
+  }
+
+  const refocus = (selector) => { const el = $(selector); if (el) el.focus(); };
+
+  ['#global-search', '#inv-search'].forEach((sel) => {
+    const input = $(sel);
+    input.addEventListener('input', (e) => setQuery(e.target.value));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { if (ui.query) setQuery(''); else input.blur(); }
+    });
+  });
+
+  $('#inv-category').addEventListener('change', (e) => {
+    ui.category = e.target.value === 'all' ? 'all' : Number(e.target.value);
+    ui.page = 1;
+    renderInventoryResults();
+  });
+
+  $('#set-pagesize').addEventListener('change', (e) => {
+    prefs.pageSize = Number(e.target.value);
+    ui.page = 1;
+    savePrefs();
+    toast({ message: 'Ajuste guardado', detail: `El inventario mostrará ${prefs.pageSize} filas por página.`, tone: 'info' });
+  });
+
+  $('#set-institucion').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); actions['save-institucion'](); } });
+
+  /* ==========================================================
+     20. ACCIONES (delegación de eventos por data-action)
+     ========================================================== */
+  const actions = {
+    'open-sidebar': () => openSidebar(),
+    'close-sidebar': () => closeSidebar(),
+    'toggle-theme': () => setTheme(isDark() ? 'light' : 'dark'),
+    'profile-menu': (el) => {
+      if (menuAnchor === el && !menuEl.hidden) { closeMenu(); return; }
+      openMenu(el, profileMenuHTML());
+    },
+    'goto-settings': () => navigate('configuracion'),
+    'logout': () => toast({ tone: 'info', message: 'Esto es una demostración', detail: 'No hay una sesión real que cerrar.' }),
+
+    'new-asset': () => openAssetDialog(null),
+    'edit-asset': (el) => openAssetDialog(Number(el.dataset.id)),
+    'delete-asset': (el) => deleteAsset(Number(el.dataset.id)),
+    'row-menu': (el) => {
+      if (menuAnchor === el && !menuEl.hidden) { closeMenu(); return; }
+      openMenu(el, rowMenuHTML(el.dataset.id));
+    },
+    'export-inventory': () => exportInventory(),
+
+    'clear-query': () => { setQuery(''); },
+    'clear-filters': () => {
+      ui.query = ''; ui.category = 'all'; ui.location = 'all'; ui.status = 'all'; ui.page = 1;
+      syncSearchInputs();
+      $('#inv-category').value = 'all';
+      renderInventoryResults();
+    },
+    'clear-location': () => { ui.location = 'all'; ui.page = 1; renderInventoryResults(); },
+    'sort': (el) => {
+      const key = el.dataset.sort;
+      ui.sort = ui.sort.key === key ? { key, dir: ui.sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' };
+      ui.page = 1;
+      renderInventoryResults();
+      refocus(`[data-action="sort"][data-sort="${key}"]`);
+    },
+    'status-filter': (el) => {
+      ui.status = el.dataset.status;
+      ui.page = 1;
+      renderInventoryResults();
+      refocus(`#inv-chips [data-status="${CSS.escape(ui.status)}"]`);
+    },
+    'page': (el) => {
+      ui.page = Number(el.dataset.page);
+      renderInventoryResults();
+      const card = $('#view-inventario .card');
+      if (card.getBoundingClientRect().top < 0) card.scrollIntoView({ block: 'start' });
+    },
+    'goto-status': (el, e) => { e.preventDefault(); goInventory({ status: el.dataset.status }); },
+    'goto-all': (el, e) => { e.preventDefault(); goInventory(); },
+    'view-category': (el) => goInventory({ category: Number(el.dataset.id) }),
+    'view-location': (el) => goInventory({ location: Number(el.dataset.id) }),
+
+    'new-category': () => openEntityDialog('category'),
+    'edit-category': (el) => openEntityDialog('category', Number(el.dataset.id)),
+    'delete-category': (el) => deleteEntity('category', Number(el.dataset.id)),
+    'new-location': () => openEntityDialog('location'),
+    'edit-location': (el) => openEntityDialog('location', Number(el.dataset.id)),
+    'delete-location': (el) => deleteEntity('location', Number(el.dataset.id)),
+
+    'download-report': (el) => {
+      const r = REPORTS.find((x) => x.id === el.dataset.report);
+      if (!r) return;
+      let list = data.assets.filter(r.pick);
+      list = r.order ? list.slice().sort(r.order) : sortAssets(list);
+      exportList(list, `reporte-${r.id}`);
+    },
+
+    'theme-set': (el) => setTheme(el.dataset.theme),
+    'density-set': (el) => {
+      prefs.density = el.dataset.density;
+      savePrefs();
+      applyDensity();
+      renderSettingsControls();
+    },
+    'save-institucion': () => {
+      const v = $('#set-institucion').value.trim();
+      const err = $('#set-institucion-err');
+      if (!v) { err.textContent = 'Ingresa el nombre de la institución.'; $('#set-institucion').setAttribute('aria-invalid', 'true'); $('#set-institucion').focus(); return; }
+      err.textContent = '';
+      $('#set-institucion').setAttribute('aria-invalid', 'false');
+      prefs.institucion = v;
+      savePrefs();
+      renderChrome();
+      toast({ message: 'Nombre guardado', detail: v });
+    },
+    'backup-data': () => {
+      const payload = JSON.stringify({ exportadoEn: new Date().toISOString(), institucion: prefs.institucion, ...data }, null, 2);
+      download(`respaldo-${slug(prefs.institucion)}-${todayISO()}.json`, payload, 'application/json');
+      toast({ message: 'Respaldo descargado', detail: `${plural(data.assets.length, 'activo', 'activos')} incluidos.`, tone: 'info' });
+    },
+    'reset-data': async () => {
+      const ok = await askConfirm({
+        title: '¿Restablecer los datos de ejemplo?',
+        body: 'Se reemplazará todo lo que hayas registrado, editado o eliminado por los datos de demostración. Esta acción no se puede deshacer.',
+        confirmLabel: 'Restablecer datos',
+        iconName: 'rotate-ccw'
+      });
+      if (!ok) return;
+      data = seed();
+      ui.query = ''; ui.category = 'all'; ui.location = 'all'; ui.status = 'all'; ui.page = 1;
+      ui.sort = { key: 'codigo', dir: 'asc' };
+      persist();
+      syncSearchInputs();
+      renderAll();
+      toast({ message: 'Datos restablecidos', detail: 'Volviste al inventario de ejemplo.', tone: 'info' });
+    }
+  };
+
+  document.addEventListener('click', (e) => {
+    const closer = e.target.closest('[data-close-dialog]');
+    if (closer) { closer.closest('dialog').close('cancel'); return; }
+
+    const el = e.target.closest('[data-action]');
+    const inMenu = e.target.closest('#menu');
+    if (!inMenu && !(el && el === menuAnchor)) closeMenu();
+    if (!el) return;
+    const fn = actions[el.dataset.action];
+    if (!fn) return;
+    fn(el, e);
+    if (inMenu) closeMenu();
+  });
+
+  /* ==========================================================
+     21. TECLADO
+     ========================================================== */
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (!$('dialog[open]')) focusSearch();
+      return;
+    }
+    if (e.key === 'Escape') {
+      if (!menuEl.hidden) { closeMenu(true); return; }
+      if (!sidebar.classList.contains('-translate-x-full') && !mqDesktop.matches) { closeSidebar(); return; }
+    }
+    const t = e.target;
+    const typing = t && (['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable);
+    if (typing || e.metaKey || e.ctrlKey || e.altKey || $('dialog[open]')) return;
+    if (e.key === '/') { e.preventDefault(); focusSearch(); }
+    else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openAssetDialog(null); }
+  });
+
+  /* ==========================================================
+     22. INICIO
+     ========================================================== */
+  let resizeFrame = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => { if (currentView === 'dashboard') fitSegLabels(); });
+  });
+  window.addEventListener('hashchange', route);
+
+ async function init() {
+    applyTheme();
+    applyDensity();
+    syncSidebarInert();
+    
+    // 👇 Esperamos a que traiga la información real del backend
+    await cargarDatosDesdeBackend();
+    
+    refreshIcons();
+    route();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>

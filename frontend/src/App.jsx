@@ -1,18 +1,19 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/login';
-import Dashboard from './pages/Dashboard';
+import { Navigate, Route, Routes } from "react-router-dom";
+import Login from "./pages/Login";
+import DashboardPage from "./pages/DashboardPage";
 
+function RequireAuth({ children }) {
+  const token = localStorage.getItem("token");
+  return token ? children : <Navigate to="/login" replace />;
+}
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        {/* Redirige cualquier ruta raíz o desconocida directamente al login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/dashboard/*" element={<RequireAuth><DashboardPage /></RequireAuth>} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }

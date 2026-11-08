@@ -6,15 +6,12 @@ import models
 import schemas
 from security import get_password_hash
 
-
 # --- ROL ---
 def get_rol(db: Session, id_rol: int):
   return db.query(models.Rol).filter(models.Rol.id_rol == id_rol).first()
 
-
 def get_roles(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.Rol).offset(skip).limit(limit).all()
-
 
 def create_rol(db: Session, rol: schemas.RolCreate):
   rol_existente = (
@@ -34,7 +31,6 @@ def create_rol(db: Session, rol: schemas.RolCreate):
   db.refresh(db_rol)
   return db_rol
 
-
 # --- USUARIO ---
 def get_usuario(db: Session, id_usuario: int):
   return (
@@ -43,7 +39,6 @@ def get_usuario(db: Session, id_usuario: int):
       .first()
   )
 
-
 def get_usuario_por_documento(db: Session, numero_documento: str):
   return (
       db.query(models.Usuario)
@@ -51,13 +46,13 @@ def get_usuario_por_documento(db: Session, numero_documento: str):
       .first()
   )
 
-
 def get_usuarios(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.Usuario).offset(skip).limit(limit).all()
 
-
 def create_usuario(db: Session, usuario: schemas.UsuarioCreate):
-  hashed_password = get_password_hash(usuario.password)
+  # Validar si hay contraseña para encriptarla
+  hashed_password = get_password_hash(usuario.password) if usuario.password else None
+  
   db_usuario = models.Usuario(
       numero_documento=usuario.numero_documento,
       nombre=usuario.nombre,
@@ -70,7 +65,6 @@ def create_usuario(db: Session, usuario: schemas.UsuarioCreate):
   db.refresh(db_usuario)
   return db_usuario
 
-
 # --- CLASE DE ACTIVO ---
 def get_clase_activo(db: Session, id_clase: int):
   return (
@@ -79,10 +73,8 @@ def get_clase_activo(db: Session, id_clase: int):
       .first()
   )
 
-
 def get_clases_activos(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.ClaseActivo).offset(skip).limit(limit).all()
-
 
 def create_clase_activo(db: Session, clase_activo: schemas.ClaseActivoCreate):
   db_clase = models.ClaseActivo(
@@ -94,6 +86,20 @@ def create_clase_activo(db: Session, clase_activo: schemas.ClaseActivoCreate):
   db.refresh(db_clase)
   return db_clase
 
+def delete_clase_activo(db: Session, id_clase: int):
+    db_clase = get_clase_activo(db, id_clase)
+    if not db_clase:
+        return None
+    try:
+        db.delete(db_clase)
+        db.commit()
+        return db_clase
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede eliminar porque tiene activos asociados.",
+        )
 
 # --- UBICACIÓN ---
 def get_ubicacion(db: Session, id_ubicacion: int):
@@ -103,10 +109,8 @@ def get_ubicacion(db: Session, id_ubicacion: int):
       .first()
   )
 
-
 def get_ubicaciones(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.Ubicacion).offset(skip).limit(limit).all()
-
 
 def create_ubicacion(db: Session, ubicacion: schemas.UbicacionCreate):
   db_ubicacion = models.Ubicacion(
@@ -119,7 +123,6 @@ def create_ubicacion(db: Session, ubicacion: schemas.UbicacionCreate):
   db.refresh(db_ubicacion)
   return db_ubicacion
 
-
 # --- ACTIVO FIJO ---
 def get_activo_fijo(db: Session, id_activo: int):
   return (
@@ -128,7 +131,6 @@ def get_activo_fijo(db: Session, id_activo: int):
       .first()
   )
 
-
 def get_activo_por_codigo(db: Session, codigo_unico: str):
   return (
       db.query(models.ActivoFijo)
@@ -136,10 +138,8 @@ def get_activo_por_codigo(db: Session, codigo_unico: str):
       .first()
   )
 
-
 def get_activos_fijos(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.ActivoFijo).offset(skip).limit(limit).all()
-
 
 def create_activo_fijo(db: Session, activo: schemas.ActivoFijoCreate):
   db_activo = models.ActivoFijo(**activo.model_dump())
@@ -147,7 +147,6 @@ def create_activo_fijo(db: Session, activo: schemas.ActivoFijoCreate):
   db.commit()
   db.refresh(db_activo)
   return db_activo
-
 
 # --- ASIGNACIÓN ---
 def get_asignacion(db: Session, id_asignacion: int):
@@ -157,10 +156,8 @@ def get_asignacion(db: Session, id_asignacion: int):
       .first()
   )
 
-
 def get_asignaciones(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.Asignacion).offset(skip).limit(limit).all()
-
 
 def create_asignacion(db: Session, asignacion: schemas.AsignacionCreate):
   db_activo = get_activo_fijo(db, asignacion.id_activo)
@@ -204,7 +201,6 @@ def create_asignacion(db: Session, asignacion: schemas.AsignacionCreate):
   db.refresh(db_asignacion)
   return db_asignacion
 
-
 # --- MOVIMIENTO ---
 def get_movimiento(db: Session, id_movimiento: int):
   return (
@@ -213,10 +209,8 @@ def get_movimiento(db: Session, id_movimiento: int):
       .first()
   )
 
-
 def get_movimientos(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.Movimiento).offset(skip).limit(limit).all()
-
 
 def create_movimiento(db: Session, movimiento: schemas.MovimientoCreate):
   db_movimiento = models.Movimiento(**movimiento.model_dump())
@@ -224,7 +218,6 @@ def create_movimiento(db: Session, movimiento: schemas.MovimientoCreate):
   db.commit()
   db.refresh(db_movimiento)
   return db_movimiento
-
 
 # --- MANTENIMIENTO ---
 def get_mantenimiento(db: Session, id_mantenimiento: int):
@@ -234,10 +227,8 @@ def get_mantenimiento(db: Session, id_mantenimiento: int):
       .first()
   )
 
-
 def get_mantenimientos(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.Mantenimiento).offset(skip).limit(limit).all()
-
 
 def create_mantenimiento(db: Session, mantenimiento: schemas.MantenimientoCreate):
   db_mantenimiento = models.Mantenimiento(**mantenimiento.model_dump())
@@ -245,7 +236,6 @@ def create_mantenimiento(db: Session, mantenimiento: schemas.MantenimientoCreate
   db.commit()
   db.refresh(db_mantenimiento)
   return db_mantenimiento
-
 
 # --- AUDITORÍA ---
 def get_auditoria(db: Session, id_auditoria: int):
@@ -255,10 +245,8 @@ def get_auditoria(db: Session, id_auditoria: int):
       .first()
   )
 
-
 def get_auditorias(db: Session, skip: int = 0, limit: int = 100):
   return db.query(models.Auditoria).offset(skip).limit(limit).all()
-
 
 def create_auditoria(db: Session, auditoria: schemas.AuditoriaCreate):
   db_auditoria = models.Auditoria(**auditoria.model_dump())
@@ -266,7 +254,6 @@ def create_auditoria(db: Session, auditoria: schemas.AuditoriaCreate):
   db.commit()
   db.refresh(db_auditoria)
   return db_auditoria
-
 
 # --- ACTUALIZAR Y ELIMINAR: ACTIVOS FIJOS ---
 def update_activo_fijo(db: Session, id_activo: int, activo: schemas.ActivoFijoCreate):
@@ -279,7 +266,6 @@ def update_activo_fijo(db: Session, id_activo: int, activo: schemas.ActivoFijoCr
   db.commit()
   db.refresh(db_activo)
   return db_activo
-
 
 def delete_activo_fijo(db: Session, id_activo: int):
   db_activo = get_activo_fijo(db, id_activo)
@@ -299,31 +285,31 @@ def delete_activo_fijo(db: Session, id_activo: int):
         ),
     )
 
-
 # --- ACTUALIZAR Y ELIMINAR: USUARIOS ---
-def update_usuario(db: Session, id_usuario: int, usuario: schemas.UsuarioCreate):
-  db_usuario = get_usuario(db, id_usuario)
-  if not db_usuario:
-    return None
-  update_data = usuario.model_dump(exclude_unset=True)
-  if "password" in update_data and update_data["password"]:
-    update_data["password"] = get_password_hash(update_data["password"])
-
-  for key, value in update_data.items():
-    setattr(db_usuario, key, value)
-  db.commit()
-  db.refresh(db_usuario)
-  return db_usuario
-
+def update_usuario(db: Session, id_usuario: int, usuario: schemas.UsuarioUpdate):
+    db_usuario = get_usuario(db, id_usuario)
+    if not db_usuario:
+        return None
+    update_data = usuario.model_dump(exclude_unset=True, exclude_none=True)
+    if update_data.get("password"):
+        update_data["password"] = get_password_hash(update_data["password"])
+    else:
+        update_data.pop("password", None)
+    for key, value in update_data.items():
+        setattr(db_usuario, key, value)
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
 
 def delete_usuario(db: Session, id_usuario: int):
-  db_usuario = get_usuario(db, id_usuario)
-  if not db_usuario:
-    return None
-  db.delete(db_usuario)
-  db.commit()
-  return db_usuario
-
+    db_usuario = get_usuario(db, id_usuario)
+    if not db_usuario:
+        return None
+    # En lugar de borrarlo de la base de datos, lo desactivamos
+    db_usuario.estado_activo = False
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
 
 # --- ACTUALIZAR Y ELIMINAR: UBICACIONES ---
 def update_ubicacion(db: Session, id_ubicacion: int, ubicacion: schemas.UbicacionCreate):
@@ -337,15 +323,20 @@ def update_ubicacion(db: Session, id_ubicacion: int, ubicacion: schemas.Ubicacio
   db.refresh(db_ubicacion)
   return db_ubicacion
 
-
 def delete_ubicacion(db: Session, id_ubicacion: int):
-  db_ubicacion = get_ubicacion(db, id_ubicacion)
-  if not db_ubicacion:
-    return None
-  db.delete(db_ubicacion)
-  db.commit()
-  return db_ubicacion
-
+    db_ubicacion = get_ubicacion(db, id_ubicacion)
+    if not db_ubicacion:
+        return None
+    try:
+        db.delete(db_ubicacion)
+        db.commit()
+        return db_ubicacion
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="No se puede eliminar la ubicación porque tiene activos asociados.",
+        )
 
 # --- LÓGICA DE NEGOCIO: DEVOLUCIÓN DE ASIGNACIÓN ---
 def devolver_asignacion(db: Session, id_asignacion: int):
@@ -364,7 +355,6 @@ def devolver_asignacion(db: Session, id_asignacion: int):
   db.refresh(db_asignacion)
   return db_asignacion
 
-
 # --- LÓGICA DE NEGOCIO: COMPLETAR MANTENIMIENTO ---
 def completar_mantenimiento(db: Session, id_mantenimiento: int):
   db_mantenimiento = get_mantenimiento(db, id_mantenimiento)
@@ -373,7 +363,6 @@ def completar_mantenimiento(db: Session, id_mantenimiento: int):
 
   db_mantenimiento.fecha_mantenimiento = date.today()
   
-  # Validación segura para actualizar el estado del mantenimiento si la columna existe en el modelo
   if hasattr(db_mantenimiento, "estado"):
     db_mantenimiento.estado = "Completado"
   elif hasattr(db_mantenimiento, "estado_mantenimiento"):
@@ -382,7 +371,6 @@ def completar_mantenimiento(db: Session, id_mantenimiento: int):
   db.commit()
   db.refresh(db_mantenimiento)
   return db_mantenimiento
-
 
 # --- LÓGICA DE NEGOCIO: TRASLADO DE ACTIVO ---
 def trasladar_activo(
@@ -412,7 +400,6 @@ def trasladar_activo(
   db.commit()
   db.refresh(db_activo)
   return db_activo
-
 
 def delete_mantenimiento(db: Session, id_mantenimiento: int):
   db_mantenimiento = get_mantenimiento(db, id_mantenimiento)
