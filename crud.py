@@ -194,7 +194,8 @@ def create_asignacion(db: Session, asignacion: schemas.AsignacionCreate):
       fecha_asignacion=datetime.now(),
   )
 
-  db_activo.estado = "En uso"
+    
+  db_activo.estado = "En Uso" 
 
   db.add(db_asignacion)
   db.commit()
@@ -233,6 +234,12 @@ def get_mantenimientos(db: Session, skip: int = 0, limit: int = 100):
 def create_mantenimiento(db: Session, mantenimiento: schemas.MantenimientoCreate):
   db_mantenimiento = models.Mantenimiento(**mantenimiento.model_dump())
   db.add(db_mantenimiento)
+  
+  # ESTO ES LO QUE HACE EL CAMBIO DE ESTADO
+  db_activo = get_activo_fijo(db, mantenimiento.id_activo)
+  if db_activo:
+    db_activo.estado = "Mantenimiento" 
+
   db.commit()
   db.refresh(db_mantenimiento)
   return db_mantenimiento
@@ -363,10 +370,10 @@ def completar_mantenimiento(db: Session, id_mantenimiento: int):
 
   db_mantenimiento.fecha_mantenimiento = date.today()
   
-  if hasattr(db_mantenimiento, "estado"):
-    db_mantenimiento.estado = "Completado"
-  elif hasattr(db_mantenimiento, "estado_mantenimiento"):
-    db_mantenimiento.estado_mantenimiento = "Completado"
+  # ESTO DEVUELVE EL ACTIVO A DISPONIBLE
+  db_activo = get_activo_fijo(db, db_mantenimiento.id_activo)
+  if db_activo:
+    db_activo.estado = "Disponible"
 
   db.commit()
   db.refresh(db_mantenimiento)

@@ -6,11 +6,11 @@ import { nf, pct, plural } from "../../utils/helpers";
 export default function DashboardView() {
   const { assets } = useApp();
 
-  const total = assets.length;
-  const enUso = assets.filter((a) => a.estado === "En Uso").length;
-  const mantenimiento = assets.filter((a) => a.estado === "Mantenimiento").length;
-  const disponibles = assets.filter((a) => a.estado === "Disponible").length;
-
+    const total = assets.length;
+  
+  const enUso = assets.filter((a) => a.estado.toLowerCase() === "en uso").length;
+  const mantenimiento = assets.filter((a) => a.estado.toLowerCase() === "mantenimiento").length;
+  const disponibles = assets.filter((a) => a.estado.toLowerCase() === "disponible").length;
   const StatCard = ({ label, value, icon: Icon, tone }) => (
     <div className="card p-5">
       <div className="flex items-center justify-between">
