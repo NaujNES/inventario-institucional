@@ -4,7 +4,8 @@ import { useApp } from "../../hooks/useApp";
 import { todayISO } from "../../utils/helpers";
 
 export default function AssetModal({ isOpen, onClose, assetToEdit }) {
-  const { categories, locations, createAsset, updateAsset, users } = useApp();
+  const { categories, locations, createAsset, updateAsset, docentes, users } = useApp();
+  const responsablesDisponibles = docentes.length > 0 ? docentes : users.filter((u) => u.estado_activo !== false);
   
   const [form, setForm] = useState({
     codigo: "",
@@ -104,17 +105,19 @@ export default function AssetModal({ isOpen, onClose, assetToEdit }) {
               <label className="label">Estado</label>
               <select className="field" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })}>
                 <option value="Disponible">Disponible</option>
-                <option value="En Uso">En Uso</option>
+                <option value="Prestado">Prestado</option>
+                {form.estado === "En Uso" && <option value="En Uso">En Uso (heredado)</option>}
                 <option value="Mantenimiento">Mantenimiento</option>
                 <option value="Dado de baja">Dado de baja</option>
               </select>
             </div>
             <div>
-              <label className="label">Responsable (Opcional)</label>
+              <label className="label">Responsable permanente (Opcional)</label>
               <select className="field" value={form.responsableId || ""} onChange={(e) => setForm({ ...form, responsableId: e.target.value })}>
                 <option value="">Sin asignar</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                {responsablesDisponibles.map((u) => <option key={u.id} value={u.id}>{u.nombre}{u.documento ? ` — ${u.documento}` : ""}</option>)}
               </select>
+              <p className="mt-1 text-xs text-ink-3">Se registra como asignación permanente en la sala seleccionada.</p>
             </div>
           </div>
         </form>

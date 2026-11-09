@@ -1,21 +1,22 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
-import { LayoutDashboard, Package, Tags, MapPin, ChartColumn, Settings, Boxes, X, Users, ClipboardList, Wrench } from "lucide-react";
+import { LayoutDashboard, Package, Tags, MapPin, ChartColumn, Settings, Boxes, X, Users, ClipboardList, Wrench, UserRound } from "lucide-react";
 import { nf } from "../../utils/helpers";
 
 export default function Sidebar({ isOpen, onClose }) {
   // Asegúrate de que esta línea de abajo esté así de completa:
-  const { assets, categories, locations, users, prefs, loans, maintenances } = useApp();
+  const { assets, categories, locations, users, prefs, loans, maintenances, docentes } = useApp();
   
   // ... (el resto de tu código)
   const links = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", end: true },
     { to: "/dashboard/inventario", icon: Package, label: "Inventario", count: assets.length },
     { to: "/dashboard/categorias", icon: Tags, label: "Categorías", count: categories.length },
-    { to: "/dashboard/ubicaciones", icon: MapPin, label: "Ubicaciones", count: locations.length },
+    { to: "/dashboard/ubicaciones", icon: MapPin, label: "Salas y espacios", count: locations.length },
+    { to: "/dashboard/docentes", icon: UserRound, label: "Docentes", count: docentes.length },
     { to: "/dashboard/reportes", icon: ChartColumn, label: "Reportes" },
- { to: "/dashboard/usuarios", icon: Users, label: "Usuarios", count: users.length },
+    { to: "/dashboard/usuarios", icon: Users, label: "Usuarios", count: users.length },
     { to: "/dashboard/prestamos", icon: ClipboardList, label: "Préstamos", count: loans.length },
     { to: "/dashboard/mantenimientos", icon: Wrench, label: "Mantenimientos", count: maintenances.length },
 ];

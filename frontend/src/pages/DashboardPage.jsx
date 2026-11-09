@@ -12,6 +12,7 @@ import SettingsView from "../components/views/SettingsView";
 import UsersView from "../components/views/UsersView";
 import LoansView from "../components/views/LoansView";
 import MaintenanceView from "../components/views/MaintenanceView";
+import DocentesView from "../components/views/DocentesView";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -21,11 +22,12 @@ export default function DashboardPage() {
   const getPageTitle = () => {
     if (location.pathname.includes("inventario")) return "Inventario de activos";
     if (location.pathname.includes("categorias")) return "Categorías";
-    if (location.pathname.includes("ubicaciones")) return "Ubicaciones";
+    if (location.pathname.includes("ubicaciones")) return "Salas y espacios";
+    if (location.pathname.includes("docentes")) return "Docentes responsables";
     if (location.pathname.includes("reportes")) return "Reportes";
     if (location.pathname.includes("configuracion")) return "Configuración";
     if (location.pathname.includes("usuarios")) return "Gestión de Usuarios";
-        if (location.pathname.includes("prestamos")) return "Gestión de Préstamos";
+    if (location.pathname.includes("prestamos")) return "Gestión de Préstamos";
     if (location.pathname.includes("mantenimientos")) return "Mantenimientos";
     return "Dashboard";
   };
@@ -44,6 +46,7 @@ export default function DashboardPage() {
             <Route path="inventario" element={<InventoryView />} />
             <Route path="categorias" element={<CategoriesView />} />
             <Route path="ubicaciones" element={<LocationsView />} />
+            <Route path="docentes" element={<DocentesView />} />
             <Route path="reportes" element={<ReportsView />} />
             <Route path="configuracion" element={<SettingsView />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

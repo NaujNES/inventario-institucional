@@ -16,8 +16,11 @@ export function AppProvider({ children }) {
   const [roles, setRoles] = useState([]);
   const [loans, setLoans] = useState([]);
   const [maintenances, setMaintenances] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [salas, setSalas] = useState([]);
+  const [docentes, setDocentes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSeeded, setIsSeeded] = useState(false);
+  const [isSeeded] = useState(false);
 
   // --- PREFERENCIAS Y TOASTS ---
   const [prefs, setPrefs] = useState(() => {
@@ -47,14 +50,72 @@ export function AppProvider({ children }) {
     }, 4500);
   }, []);
 
-  // --- FUNCIÓN PARA MANEJAR ERRORES DE FASTAPI ---
-  // La movimos aquí arriba para que esté disponible en todas las funciones
   const getErrorMessage = (error) => {
     const detail = error.response?.data?.detail;
     if (typeof detail === "string") return detail;
     if (Array.isArray(detail)) return detail.map((d) => d.msg).join(", ");
     return "Ocurrió un error inesperado. Revisa los datos.";
   };
+
+  const mapAssignment = (a) => ({
+    id: a.id_asignacion_activo,
+    idActivo: a.id_activo,
+    idUsuarioResponsable: a.id_usuario_responsable,
+    idUbicacion: a.id_ubicacion,
+    estado: a.estado,
+    observaciones: a.observaciones,
+    fechaAsignacion: a.fecha_asignacion,
+    fechaFin: a.fecha_fin,
+    nombreResponsable: a.nombre_responsable,
+    documentoResponsable: a.documento_responsable,
+    nombreSala: a.nombre_sala,
+    nombreActivo: a.nombre_activo,
+    codigoActivo: a.codigo_activo,
+  });
+
+  const mapLoan = (l) => ({
+    id: l.id_prestamo,
+    id_activo: l.id_activo,
+    nombre_solicitante: l.nombre_solicitante,
+    grado: l.grado,
+    fecha_prestamo: l.fecha_prestamo,
+    actividad: l.actividad,
+    fecha_entrega: l.fecha_entrega,
+    fecha_devolucion_esperada: l.fecha_devolucion_esperada,
+    observaciones_entrega: l.observaciones_entrega,
+    estado: l.estado_prestamo,
+    fecha_devolucion_real: l.fecha_devolucion_real,
+    observaciones_devolucion: l.observaciones_devolucion,
+    persona_recibe_devolucion: l.persona_recibe_devolucion,
+    estado_devolucion: l.estado_devolucion,
+    nombre_activo: l.nombre_activo,
+    codigo_activo: l.codigo_activo,
+    nombre_usuario_registra: l.nombre_usuario_registra,
+    vencido: l.vencido,
+    componentes: l.componentes || [],
+  });
+
+  const mapDocente = (d) => ({
+    id: d.id_usuario,
+    nombre: d.nombre,
+    documento: d.numero_documento,
+    rol: d.rol,
+    salas: d.salas || [],
+    totalSalas: d.total_salas || 0,
+    totalActivosAsignados: d.total_activos_asignados || 0,
+    activosAsignados: (d.activos_asignados || []).map(mapAssignment),
+    prestamosTemporales: (d.prestamos_temporales || []).map(mapLoan),
+  });
+
+  const mapSala = (s) => ({
+    id: s.id_ubicacion,
+    nombre: s.nombre_espacio,
+    bloque: s.edificio_bloque || "General",
+    descripcion: s.descripcion,
+    totalActivos: s.total_activos || 0,
+    docentes: s.docentes || [],
+    activos: s.activos || [],
+  });
 
   // --- CARGA DE DATOS ---
   const fetchData = useCallback(async () => {
@@ -66,21 +127,38 @@ export function AppProvider({ children }) {
         api.get("/usuarios/"),
         api.get("/clases-activo/"),
         api.get("/roles/"),
-        api.get("/asignaciones/"),    
-        api.get("/mantenimientos/")   
+        api.get("/prestamos/"),
+        api.get("/mantenimientos/"),
+        api.get("/asignaciones-activo/"),
+        api.get("/salas/"),
+        api.get("/docentes/"),
       ]);
 
+      let mappedAssignments = [];
+      if (results[7].status === "fulfilled") {
+        mappedAssignments = results[7].value.data.map(mapAssignment);
+        setAssignments(mappedAssignments);
+      }
+
       if (results[0].status === "fulfilled") {
-        setAssets(results[0].value.data.map((a) => ({
-          id: a.id_activo,
-          codigo: a.codigo_unico,
-          nombre: a.nombre_activo,
-          descripcion: a.descripcion,
-          categoriaId: a.id_clase,
-          ubicacionId: a.id_ubicacion,
-          estado: a.estado,
-          fecha: a.fecha_adquisicion ? a.fecha_adquisicion.split("T")[0] : todayISO()
-        })));
+        setAssets(results[0].value.data.map((a) => {
+          const asignacion = mappedAssignments.find(
+            (x) => x.idActivo === a.id_activo && x.estado === "Activa"
+          );
+          return {
+            id: a.id_activo,
+            codigo: a.codigo_unico,
+            nombre: a.nombre_activo,
+            descripcion: a.descripcion,
+            categoriaId: a.id_clase,
+            ubicacionId: a.id_ubicacion,
+            estado: a.estado,
+            fecha: a.fecha_adquisicion ? a.fecha_adquisicion.split("T")[0] : todayISO(),
+            responsableId: asignacion?.idUsuarioResponsable || null,
+            responsableNombre: asignacion?.nombreResponsable || null,
+            salaResponsable: asignacion?.nombreSala || null,
+          };
+        }));
       }
 
       if (results[1].status === "fulfilled") {
@@ -88,7 +166,7 @@ export function AppProvider({ children }) {
           id: l.id_ubicacion,
           nombre: l.nombre_espacio,
           bloque: l.edificio_bloque || "General",
-          descripcion: l.descripcion
+          descripcion: l.descripcion,
         })));
       }
 
@@ -98,7 +176,7 @@ export function AppProvider({ children }) {
           nombre: u.nombre,
           documento: u.numero_documento,
           id_rol: u.id_rol,
-          estado_activo: u.estado_activo
+          estado_activo: u.estado_activo,
         })));
       }
 
@@ -107,23 +185,16 @@ export function AppProvider({ children }) {
           id: c.id_clase,
           nombre: c.nombre_clase,
           descripcion: c.descripcion,
-          icono: "tag"
+          icono: "tag",
         })));
       }
 
       if (results[4].status === "fulfilled") {
         setRoles(results[4].value.data);
       }
-      
+
       if (results[5].status === "fulfilled") {
-        setLoans(results[5].value.data.map((l) => ({
-          id: l.id_asignacion,
-          id_activo: l.id_activo,
-          id_usuario: l.id_usuario_responsable,
-          estado: l.estado_asignacion,
-          fecha_asignacion: l.fecha_asignacion,
-          fecha_devolucion: l.fecha_devolucion
-        })));
+        setLoans(results[5].value.data.map(mapLoan));
       }
 
       if (results[6].status === "fulfilled") {
@@ -133,15 +204,23 @@ export function AppProvider({ children }) {
           tipo: m.tipo_mantenimiento,
           descripcion: m.descripcion,
           costo: m.costo,
-          fecha: m.fecha_mantenimiento
+          fecha: m.fecha_mantenimiento,
         })));
+      }
+
+      if (results[8].status === "fulfilled") {
+        setSalas(results[8].value.data.map(mapSala));
+      }
+
+      if (results[9].status === "fulfilled") {
+        setDocentes(results[9].value.data.map(mapDocente));
       }
     } catch (error) {
       console.error("Error crítico cargando datos:", error);
     } finally {
       setLoading(false);
     }
-  }, []); 
+  }, []);
 
   useEffect(() => {
     if (localStorage.getItem("token")) {
@@ -150,6 +229,19 @@ export function AppProvider({ children }) {
       setLoading(false);
     }
   }, [fetchData]);
+
+  const refresh = useCallback(async () => {
+    await fetchData();
+  }, [fetchData]);
+
+  // --- FUNCIONES DE APOYO ---
+  const assignAssetRequest = async (idActivo, payload) => {
+    return api.post(`/activos/${idActivo}/asignacion`, {
+      id_usuario_responsable: parseInt(payload.id_usuario_responsable),
+      id_ubicacion: parseInt(payload.id_ubicacion),
+      observaciones: payload.observaciones || null,
+    });
+  };
 
   // --- CRUD ACTIVOS ---
   const createAsset = async (payload) => {
@@ -161,13 +253,22 @@ export function AppProvider({ children }) {
         estado: payload.estado,
         id_clase: parseInt(payload.categoriaId),
         id_ubicacion: parseInt(payload.ubicacionId),
-        fecha_adquisicion: new Date(payload.fecha).toISOString()
+        fecha_adquisicion: new Date(payload.fecha).toISOString(),
       };
-      await api.post("/activos/", backendPayload);
+      const creado = await api.post("/activos/", backendPayload);
+      if (payload.responsableId) {
+        await assignAssetRequest(creado.data.id_activo, {
+          id_usuario_responsable: payload.responsableId,
+          id_ubicacion: payload.ubicacionId,
+          observaciones: "Asignación registrada al crear el activo.",
+        });
+      }
       await fetchData();
       showToast("Activo registrado", `${payload.codigo} se agregó al inventario.`);
+      return creado.data;
     } catch (error) {
       showToast("Error al crear", getErrorMessage(error), "error");
+      return null;
     }
   };
 
@@ -180,13 +281,22 @@ export function AppProvider({ children }) {
         estado: payload.estado,
         id_clase: parseInt(payload.categoriaId),
         id_ubicacion: parseInt(payload.ubicacionId),
-        fecha_adquisicion: new Date(payload.fecha).toISOString()
+        fecha_adquisicion: new Date(payload.fecha).toISOString(),
       };
       await api.put(`/activos/${id}`, backendPayload);
+      if (payload.responsableId) {
+        await assignAssetRequest(id, {
+          id_usuario_responsable: payload.responsableId,
+          id_ubicacion: payload.ubicacionId,
+          observaciones: "Responsable actualizado desde la ficha del activo.",
+        });
+      }
       await fetchData();
       showToast("Cambios guardados", `${payload.codigo} se actualizó.`);
+      return true;
     } catch (error) {
       showToast("Error al actualizar", getErrorMessage(error), "error");
+      return false;
     }
   };
 
@@ -225,7 +335,7 @@ export function AppProvider({ children }) {
     try {
       await api.post("/ubicaciones/", { nombre_espacio: nombre, edificio_bloque: bloque, descripcion });
       await fetchData();
-      showToast("Ubicación creada", `${nombre}, ${bloque}`);
+      showToast("Sala creada", `${nombre}, ${bloque}`);
     } catch (error) {
       showToast("Error al crear", getErrorMessage(error), "error");
     }
@@ -239,7 +349,7 @@ export function AppProvider({ children }) {
         nombre: payload.nombre,
         password: payload.password || null,
         id_rol: parseInt(payload.id_rol),
-        estado_activo: payload.estado_activo
+        estado_activo: payload.estado_activo,
       });
       await fetchData();
       showToast("Usuario creado", `${payload.nombre} fue registrado.`);
@@ -254,15 +364,14 @@ export function AppProvider({ children }) {
         nombre: payload.nombre,
         numero_documento: payload.documento,
         id_rol: parseInt(payload.id_rol),
-        estado_activo: payload.estado_activo
+        estado_activo: payload.estado_activo,
       };
       if (payload.password) data.password = payload.password;
-
       await api.patch(`/usuarios/${id}`, data);
       await fetchData();
       showToast("Usuario actualizado", "Los datos se guardaron correctamente.");
     } catch (error) {
-      showToast("Error al actualizar", getErrorMessage(error), "error"); 
+      showToast("Error al actualizar", getErrorMessage(error), "error");
     }
   };
 
@@ -270,55 +379,184 @@ export function AppProvider({ children }) {
     try {
       await api.delete(`/usuarios/${id}`);
       await fetchData();
-      showToast("Usuario desactivado", "Ya no podrá iniciar sesión, pero su historial se conserva."); 
+      showToast("Usuario desactivado", "Ya no podrá iniciar sesión, pero su historial se conserva.");
     } catch (error) {
       showToast("Error al desactivar", getErrorMessage(error), "error");
     }
   };
 
-  // --- PRÉSTAMOS Y MANTENIMIENTOS ---
+  // --- PRÉSTAMOS ---
   const createLoan = async (payload) => {
     try {
-      await api.post("/asignaciones/", {
+      const body = {
         id_activo: parseInt(payload.id_activo),
-        id_usuario_responsable: parseInt(payload.id_usuario),
-        estado_asignacion: "Activa",
-        observaciones: payload.observaciones
-      });
+        nombre_solicitante: payload.nombre_solicitante,
+        grado: payload.grado || null,
+        fecha_prestamo: payload.fecha_prestamo,
+        actividad: payload.actividad || null,
+        fecha_entrega: payload.fecha_entrega || null,
+        fecha_devolucion_esperada: payload.fecha_devolucion_esperada || null,
+        observaciones_entrega: payload.observaciones_entrega || null,
+        componentes: (payload.componentes || []).map((c) => ({
+          nombre_componente: c.nombre_componente,
+          estado_entrega: c.estado_entrega,
+          observacion_entrega: c.observacion_entrega || null,
+        })),
+      };
+      await api.post("/prestamos/", body);
       await fetchData();
-      showToast("Préstamo registrado", "El activo ahora está En Uso.");
+      showToast("Préstamo registrado", "El activo quedó marcado como Prestado.");
+      return true;
     } catch (error) {
-      showToast("Error al asignar", getErrorMessage(error), "error");
+      showToast("Error al registrar préstamo", getErrorMessage(error), "error");
+      return false;
     }
   };
 
-  const returnLoan = async (id) => {
+  const returnLoan = async (id, payload) => {
     try {
-      await api.patch(`/asignaciones/${id}/devolver`);
+      const body = {
+        fecha_devolucion_real: payload.fecha_devolucion_real,
+        persona_recibe_devolucion: payload.persona_recibe_devolucion,
+        estado_devolucion: payload.estado_devolucion,
+        observaciones_devolucion: payload.observaciones_devolucion || null,
+        componentes: (payload.componentes || []).map((c) => ({
+          id_componente_prestamo: c.id_componente_prestamo,
+          estado_devolucion: c.estado_devolucion,
+          observacion_devolucion: c.observacion_devolucion || null,
+        })),
+      };
+      await api.post(`/prestamos/${id}/devolver`, body);
       await fetchData();
-      showToast("Devolución exitosa", "El activo vuelve a estar Disponible.");
+      showToast("Devolución registrada", "El activo vuelve a estar Disponible.");
+      return true;
     } catch (error) {
       showToast("Error al devolver", getErrorMessage(error), "error");
+      return false;
     }
   };
 
-    const deleteLoan = async (id) => {
+  // --- ASIGNACIONES PERMANENTES ---
+  const assignAsset = async (idActivo, payload) => {
     try {
-      await api.delete(`/asignaciones/${id}`);
+      await assignAssetRequest(idActivo, payload);
       await fetchData();
-      showToast("Registro eliminado", "El historial de préstamo ha sido borrado.");
+      showToast("Responsable asignado", "La asignación permanente fue registrada.");
+      return true;
     } catch (error) {
-      showToast("Error al eliminar", getErrorMessage(error), "error");
+      showToast("Error al asignar", getErrorMessage(error), "error");
+      return false;
     }
   };
 
+  const transferAsset = async (idActivo, payload) => {
+    try {
+      await api.post(`/activos/${idActivo}/trasladar`, {
+        id_ubicacion: parseInt(payload.id_ubicacion),
+        id_usuario_responsable: payload.id_usuario_responsable
+          ? parseInt(payload.id_usuario_responsable)
+          : null,
+        observaciones: payload.observaciones || null,
+      });
+      await fetchData();
+      showToast("Activo trasladado", "La ubicación y el historial fueron actualizados.");
+      return true;
+    } catch (error) {
+      showToast("Error al trasladar", getErrorMessage(error), "error");
+      return false;
+    }
+  };
+
+  const closeAssignment = async (idAsignacion, observaciones = "") => {
+    try {
+      await api.patch(`/asignaciones-activo/${idAsignacion}/cerrar`, null, {
+        params: { observaciones },
+      });
+      await fetchData();
+      showToast("Asignación cerrada", "El activo quedó sin responsable permanente.");
+      return true;
+    } catch (error) {
+      showToast("Error al cerrar asignación", getErrorMessage(error), "error");
+      return false;
+    }
+  };
+
+  // --- SALAS Y DOCENTES ---
+  const addSalaDocente = async (idSala, payload) => {
+    try {
+      await api.post(`/salas/${idSala}/docentes`, {
+        id_usuario: parseInt(payload.id_usuario),
+        es_responsable_principal: !!payload.es_responsable_principal,
+        observaciones: payload.observaciones || null,
+      });
+      await fetchData();
+      showToast("Docente asociado", "La sala ahora tiene un nuevo responsable.");
+      return true;
+    } catch (error) {
+      showToast("Error al asociar docente", getErrorMessage(error), "error");
+      return false;
+    }
+  };
+
+  const removeSalaDocente = async (idSala, idAsociacion) => {
+    try {
+      await api.delete(`/salas/${idSala}/docentes/${idAsociacion}`);
+      await fetchData();
+      showToast("Docente desasociado", "La asociación se conserva en el historial.");
+      return true;
+    } catch (error) {
+      showToast("Error al desasociar", getErrorMessage(error), "error");
+      return false;
+    }
+  };
+
+  const fetchSalaDetail = async (idSala) => {
+    try {
+      const response = await api.get(`/salas/${idSala}`);
+      return mapSala(response.data);
+    } catch (error) {
+      showToast("Error al cargar sala", getErrorMessage(error), "error");
+      return null;
+    }
+  };
+
+  const fetchDocenteDetail = async (idDocente) => {
+    try {
+      const response = await api.get(`/docentes/${idDocente}`);
+      return mapDocente(response.data);
+    } catch (error) {
+      showToast("Error al cargar docente", getErrorMessage(error), "error");
+      return null;
+    }
+  };
+
+  const fetchAssetHistory = async (idActivo) => {
+    try {
+      const response = await api.get(`/activos/${idActivo}/historial`);
+      const data = response.data;
+      return {
+        activo: data.activo,
+        asignacionActual: data.asignacion_actual ? mapAssignment(data.asignacion_actual) : null,
+        prestamoActivo: data.prestamo_activo ? mapLoan(data.prestamo_activo) : null,
+        prestamos: (data.prestamos || []).map(mapLoan),
+        asignaciones: (data.asignaciones || []).map(mapAssignment),
+        movimientos: data.movimientos || [],
+        cambios: data.cambios || [],
+      };
+    } catch (error) {
+      showToast("Error al cargar historial", getErrorMessage(error), "error");
+      return null;
+    }
+  };
+
+  // --- MANTENIMIENTOS ---
   const createMaintenance = async (payload) => {
     try {
       await api.post("/mantenimientos/", {
         id_activo: parseInt(payload.id_activo),
         tipo_mantenimiento: payload.tipo,
         descripcion: payload.descripcion,
-        costo: parseFloat(payload.costo) || 0
+        costo: parseFloat(payload.costo) || 0,
       });
       await fetchData();
       showToast("Mantenimiento registrado", "El activo ha sido enviado a revisión.");
@@ -337,17 +575,21 @@ export function AppProvider({ children }) {
     }
   };
 
-    return (
+  return (
     <AppContext.Provider
       value={{
-        assets, categories, locations, users, roles, loans, maintenances, loading, isSeeded,
-        prefs, setPrefs, fetchData,
+        assets, categories, locations, users, roles, loans, maintenances,
+        assignments, salas, docentes, loading, isSeeded,
+        prefs, setPrefs, fetchData, refresh,
         createAsset, updateAsset, deleteAsset,
         createCategory, deleteCategory, createLocation,
         createUser, updateUser, deleteUser,
-        createLoan, returnLoan, deleteLoan, 
+        createLoan, returnLoan,
+        assignAsset, transferAsset, closeAssignment,
+        addSalaDocente, removeSalaDocente,
+        fetchSalaDetail, fetchDocenteDetail, fetchAssetHistory,
         createMaintenance, completeMaintenance,
-        toasts, showToast
+        toasts, showToast,
       }}
     >
       {children}

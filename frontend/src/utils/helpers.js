@@ -26,10 +26,23 @@ export const plural = (n, one, many) => `${nf.format(n)} ${n === 1 ? one : many}
 const pad = (n) => String(n).padStart(2, "0");
 export const toISO = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const parseISO = (s) => {
-  const [y, m, d] = String(s).split("-").map(Number);
+  const [y, m, d] = String(s ?? "").slice(0, 10).split("-").map(Number);
   return new Date(y, (m || 1) - 1, d || 1);
 };
 export const todayISO = () => toISO(new Date());
+export const toInputDate = (s) => (s ? String(s).slice(0, 10) : "");
+export const toInputDateTime = (s) => {
+  if (!s) return "";
+  let d;
+  if (s instanceof Date) {
+    d = s;
+  } else {
+    const raw = String(s);
+    d = new Date(raw.includes("T") ? raw : `${raw.slice(0, 10)}T00:00:00`);
+  }
+  if (Number.isNaN(d.getTime())) return toInputDate(s);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 export const daysAgoISO = (n) => {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
@@ -40,6 +53,19 @@ export const fmtDate = (s) =>
   s
     ? new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", year: "numeric" }).format(parseISO(s))
     : "";
+export const fmtDateTime = (s) => {
+  if (!s) return "";
+  const raw = String(s);
+  const d = new Date(raw.includes("T") ? raw : `${raw.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return fmtDate(s);
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+};
 
 export function timeAgo(ts) {
   const min = Math.floor(Math.max(0, Date.now() - ts) / 60000);

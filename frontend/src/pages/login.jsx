@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useApp } from "../hooks/useApp";
 import { Lock, User, LogIn, AlertCircle } from "lucide-react";
 
 export default function Login() {
@@ -9,6 +10,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { refresh } = useApp();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,6 +27,7 @@ export default function Login() {
       });
 
       localStorage.setItem("token", response.data.access_token);
+      await refresh();
       navigate("/dashboard");
     } catch (err) {
       setError("Documento o contraseña incorrectos.");
