@@ -64,13 +64,13 @@ Una vez que los tres contenedores estén en estado "Running" (verde) en Docker D
 👉 http://localhost
 
 🔑 Credenciales de Acceso (Pruebas)
-Para ingresar al sistema por primera vez, utiliza las siguientes credenciales de prueba:
+Nota sobre el primer inicio de sesión:
+El sistema está programado para crear automáticamente un usuario Administrador la primera vez que se enciende con Docker.
 
-Usuario / Documento: 1001
+Usuario: 1001
 
 Contraseña: 123456
-(Se recomienda cambiar la contraseña después del primer inicio de sesión).
-
+Una vez dentro, se recomienda ir al módulo de Usuarios y cambiar esta contraseña o crear un usuario personalizado para el administrador real.
 
 🛑 Comandos Útiles de Docker
 Detener el proyecto:
