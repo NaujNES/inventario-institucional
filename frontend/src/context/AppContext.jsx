@@ -302,6 +302,16 @@ export function AppProvider({ children }) {
     }
   };
 
+    const deleteLoan = async (id) => {
+    try {
+      await api.delete(`/asignaciones/${id}`);
+      await fetchData();
+      showToast("Registro eliminado", "El historial de préstamo ha sido borrado.");
+    } catch (error) {
+      showToast("Error al eliminar", getErrorMessage(error), "error");
+    }
+  };
+
   const createMaintenance = async (payload) => {
     try {
       await api.post("/mantenimientos/", {
@@ -327,7 +337,7 @@ export function AppProvider({ children }) {
     }
   };
 
-  return (
+    return (
     <AppContext.Provider
       value={{
         assets, categories, locations, users, roles, loans, maintenances, loading, isSeeded,
@@ -335,7 +345,8 @@ export function AppProvider({ children }) {
         createAsset, updateAsset, deleteAsset,
         createCategory, deleteCategory, createLocation,
         createUser, updateUser, deleteUser,
-        createLoan, returnLoan, createMaintenance, completeMaintenance,
+        createLoan, returnLoan, deleteLoan, 
+        createMaintenance, completeMaintenance,
         toasts, showToast
       }}
     >

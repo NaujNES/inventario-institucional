@@ -362,6 +362,14 @@ def devolver_asignacion(db: Session, id_asignacion: int):
   db.refresh(db_asignacion)
   return db_asignacion
 
+def delete_asignacion(db: Session, id_asignacion: int):
+    db_asignacion = get_asignacion(db, id_asignacion)
+    if not db_asignacion:
+        return None
+    db.delete(db_asignacion)
+    db.commit()
+    return db_asignacion
+
 # --- LÓGICA DE NEGOCIO: COMPLETAR MANTENIMIENTO ---
 def completar_mantenimiento(db: Session, id_mantenimiento: int):
   db_mantenimiento = get_mantenimiento(db, id_mantenimiento)

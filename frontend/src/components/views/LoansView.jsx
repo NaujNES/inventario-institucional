@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useApp } from "../../hooks/useApp";
-import { ArrowRightLeft, CheckCircle2 } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2 , Trash2 } from "lucide-react";
 
 export default function LoansView() {
-  const { loans, assets, users, createLoan, returnLoan } = useApp();
+  const { loans, assets, users, createLoan, returnLoan, deleteLoan } = useApp();
   const [form, setForm] = useState({ id_activo: "", id_usuario: "", observaciones: "" });
 
   // Solo podemos prestar activos que estén "Disponibles"
@@ -62,10 +62,20 @@ export default function LoansView() {
                         {l.estado}
                       </span>
                     </td>
-                    <td className="p-4 text-center">
-                      {l.estado === "Activa" && (
+                      <td className="p-4 text-center">
+                      {l.estado === "Activa" ? (
                         <button onClick={() => returnLoan(l.id)} className="btn btn-secondary btn-sm text-emerald-600 border-emerald-200">
                           <CheckCircle2 size={14} /> Devolver
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => {
+                            if(window.confirm("¿Eliminar este registro del historial?")) deleteLoan(l.id);
+                          }} 
+                          className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md transition-colors"
+                          title="Eliminar del historial"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </td>

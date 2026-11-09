@@ -275,6 +275,17 @@ def devolver_asignacion(
         raise HTTPException(400, "Asignación no encontrada o ya devuelta.")
     return db_asignacion
 
+@app.delete("/asignaciones/{id_asignacion}", tags=["Asignaciones"])
+def eliminar_asignacion(
+    id_asignacion: int,
+    db: Session = Depends(database.get_db),
+    _: models.Usuario = Depends(security.get_current_user),
+):
+    db_asignacion = crud.delete_asignacion(db, id_asignacion)
+    if not db_asignacion:
+        raise HTTPException(404, "Asignación no encontrada")
+    return {"message": "Asignación eliminada del historial"}
+
 # --- MOVIMIENTOS ---
 @app.post("/movimientos/", response_model=schemas.MovimientoResponse, tags=["Movimientos"])
 def crear_movimiento(
