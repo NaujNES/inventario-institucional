@@ -7,7 +7,35 @@ from typing import List
 import models, schemas, crud, security, database
 
 models.Base.metadata.create_all(bind=database.engine)
-
+# --- CREACIÓN AUTOMÁTICA DEL USUARIO ADMIN POR DEFECTO ---
+db = database.SessionLocal()
+try:
+    # Verificamos si ya existe algún usuario en la base de datos
+    if db.query(models.Usuario).count() == 0:
+        print("Base de datos vacía. Creando usuario administrador por defecto...")
+        
+        # 1. Creamos el rol de Administrador si no existe
+        admin_rol = db.query(models.Rol).filter(models.Rol.nombre_rol == "Administrador").first()
+        if not admin_rol:
+            admin_rol = models.Rol(nombre_rol="Administrador", descripcion="Acceso total al sistema")
+            db.add(admin_rol)
+            db.commit()
+            db.refresh(admin_rol)
+        
+        # 2. Creamos el usuario admin con contraseña encriptada
+        admin_user = models.Usuario(
+            numero_documento="1001",
+            nombre="Administrador Inicial",
+            password=security.get_password_hash("123456"), # Contraseña encriptada
+            id_rol=admin_rol.id_rol,
+            estado_activo=True
+        )
+        db.add(admin_user)
+        db.commit()
+        print("¡Usuario Administrador creado con éxito! (Usuario: 1001, Contraseña: 123456)")
+finally:
+    db.close()
+# ---------------------------------------------------------
 app = FastAPI(
     title="API Inventario Institucional",
     description="Sistema backend para la gestión y control de inventario institucional",
