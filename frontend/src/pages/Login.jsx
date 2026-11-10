@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useApp } from "../hooks/useApp";
-import { Lock, User, LogIn, AlertCircle } from "lucide-react";
+import { PROJECT_TITLE } from "../utils/project";
+import { Lock, User, AlertCircle } from "lucide-react";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -29,7 +30,7 @@ export default function Login() {
       localStorage.setItem("token", response.data.access_token);
       await refresh();
       navigate("/dashboard");
-    } catch (err) {
+    } catch {
       setError("Documento o contraseña incorrectos.");
     } finally {
       setLoading(false);
@@ -40,10 +41,12 @@ export default function Login() {
     <div className="min-h-screen bg-canvas flex items-center justify-center px-4 font-sans">
       <div className="max-w-md w-full bg-surface rounded-2xl shadow-pop p-8 border border-line">
         <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-accent-soft text-accent-fg rounded-xl mb-4">
-            <LogIn size={32} />
-          </div>
-          <h2 className="text-2xl font-semibold text-ink tracking-tight">Inventario Institucional</h2>
+          <img
+            src="/logo.png"
+            alt="Escudo Institución Educativa Nuestra Señora de Chiquinquirá"
+            className="mx-auto mb-4 size-24 rounded-2xl bg-white object-contain p-1 shadow-sm ring-1 ring-line"
+          />
+          <h2 className="text-xl font-semibold text-ink tracking-tight leading-snug">{PROJECT_TITLE}</h2>
           <p className="text-ink-3 text-sm mt-1">Inicia sesión para acceder al sistema</p>
         </div>
 

@@ -1,4 +1,3 @@
-import React from "react";
 import { useApp } from "../../hooks/useApp";
 import {
   Package, UserCheck, Wrench, PackageCheck, Minus, ClipboardList,
@@ -39,7 +38,7 @@ export default function DashboardView() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-ink sm:text-2xl">Panel General</h2>
-          <p className="mt-0.5 text-sm text-ink-3">Resumen del inventario institucional, préstamos y responsables.</p>
+          <p className="mt-0.5 text-sm text-ink-3">Resumen del inventario de la sala de cómputo y STEAM, préstamos y responsables.</p>
         </div>
       </div>
 

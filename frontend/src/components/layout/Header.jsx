@@ -1,4 +1,3 @@
-import React from "react";
 import { Menu, Search, Moon, Sun, User, LogOut } from "lucide-react";
 import { useApp } from "../../hooks/useApp";
 import { useNavigate } from "react-router-dom";

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MapPin, Plus, Building2, Users, Package, ChevronRight } from "lucide-react";
 import { useApp } from "../../hooks/useApp";
 import EntityModal from "../modals/EntityModal";

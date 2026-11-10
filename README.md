@@ -1,4 +1,4 @@
-# 📦 Sistema de Gestión de Inventario Institucional
+# 📦 Prototipo para manejo Inventarios de Sala de Computo y STEAM
 
 ![Status](https://img.shields.io/badge/Status-Completado-success)
 ![Docker](https://img.shields.io/badge/Docker-Enabled-blue)
@@ -6,7 +6,7 @@
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
 ![MySQL](https://img.shields.io/badge/Database-MySQL-4479A1?logo=mysql&logoColor=white)
 
-Sistema web integral diseñado para la centralización, registro, control y trazabilidad de los activos fijos institucionales. Permite la administración eficiente de recursos, control de préstamos, seguimiento de mantenimientos y gestión de usuarios basada en roles.
+Sistema web integral diseñado para la centralización, registro, control y trazabilidad de los activos fijos de la sala de cómputo y STEAM. Permite la administración eficiente de recursos, control de préstamos, seguimiento de mantenimientos y gestión de usuarios basada en roles.
 
 ## ✨ Características Principales
 
@@ -38,38 +38,68 @@ El proyecto está completamente dockerizado para garantizar la portabilidad del 
 ### Paso 1: Clonar o descargar el proyecto
 Clona el repositorio o descomprime el archivo en una carpeta de tu elección y abre una terminal en la raíz del proyecto (donde se encuentra el archivo `docker-compose.yml`).
 
-### Paso 2: Construir y levantar los contenedores
+### Paso 2: Configurar las variables de entorno
+Crea un archivo `.env` en la raíz del proyecto con las credenciales de la base de datos y de la aplicación:
+
+```env
+MYSQL_HOST=db
+MYSQL_PORT=3306
+MYSQL_DB=inventario_institucional
+MYSQL_USER=appuser
+MYSQL_PASSWORD=12345
+MYSQL_ROOT_PASSWORD=rootpass123
+ADMIN_PASSWORD=admin12345
+SECRET_KEY=mi_clave_super_secreta_para_el_inventario_2026
+```
+
+> `MYSQL_PASSWORD` es la contraseña del usuario de la aplicación (`appuser`) y
+> `MYSQL_ROOT_PASSWORD` la del usuario `root`. No las confundas: el backend usa
+> `MYSQL_USER`/`MYSQL_PASSWORD`.
+
+### Paso 3: Construir y levantar los contenedores
 Ejecuta el siguiente comando para descargar las imágenes y compilar la aplicación:
 
 ```bash
 docker compose up -d --build
-Nota: La primera ejecución puede tardar algunos minutos mientras descarga las imágenes base.
+```
 
-Paso 3: Restaurar la Base de Datos (Datos Iniciales)
-El contenedor de la base de datos se inicia vacío. Para cargar la estructura y los datos iniciales, asegúrate de tener el archivo respaldo.sql en la raíz del proyecto y ejecuta:
+> La primera ejecución puede tardar algunos minutos mientras descarga las imágenes base.
+
+### Paso 4: Restaurar la Base de Datos (Datos Iniciales)
+El contenedor de la base de datos se inicia vacío. Para cargar la estructura y los datos iniciales, asegúrate de tener el archivo `respaldo.sql` en la raíz del proyecto y ejecuta:
 
 1. Copiar el respaldo al contenedor:
 
-
+```bash
 docker cp respaldo.sql proyectoinventarioinstitucional-db-1:/respaldo.sql
-2. Ejecutar el script SQL en MySQL:
+```
 
+2. Ejecutar el script SQL en MySQL (usando la contraseña de `MYSQL_ROOT_PASSWORD`):
 
-docker exec -i proyectoinventarioinstitucional-db-1 mysql -uroot -p12345 inventario_institucional -e "source /respaldo.sql"
-(Si usas PowerShell, usa docker.exe o la ruta absoluta del ejecutable de Docker).
+```bash
+docker exec -i proyectoinventarioinstitucional-db-1 mysql -uroot -prootpass123 inventario_institucional -e "source /respaldo.sql"
+```
 
-Paso 4: Acceder a la aplicación
+> Si usas PowerShell, usa `docker.exe` o la ruta absoluta del ejecutable de Docker.
+
+### Paso 5: Acceder a la aplicación
 Una vez que los tres contenedores estén en estado "Running" (verde) en Docker Desktop, abre tu navegador web y visita:
 
 👉 http://localhost
 
+> **Importante:** entra siempre por `http://localhost`. No abras el archivo
+> `legacy/index.html` ni uses Live Server: esa es la versión antigua del
+> prototipo y muestra datos de demostración guardados en el navegador.
+> La aplicación real es la de `frontend/` y se sirve con Docker.
+
 🔑 Credenciales de Acceso (Pruebas)
-Nota sobre el primer inicio de sesión:
-El sistema está programado para crear automáticamente un usuario Administrador la primera vez que se enciende con Docker.
+El sistema crea automáticamente un usuario Administrador la primera vez que se
+inicia con una base de datos vacía. La contraseña se toma de `ADMIN_PASSWORD` en
+el archivo `.env`.
 
 Usuario: 1001
 
-Contraseña: 123456
+Contraseña: admin12345 (o el valor de `ADMIN_PASSWORD` en tu `.env`)
 Una vez dentro, se recomienda ir al módulo de Usuarios y cambiar esta contraseña o crear un usuario personalizado para el administrador real.
 
 🛑 Comandos Útiles de Docker

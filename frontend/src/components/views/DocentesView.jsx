@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, Users, Package, MapPin, ChevronRight, Star } from "lucide-react";
 import { useApp } from "../../hooks/useApp";
 import { initials } from "../../utils/helpers";

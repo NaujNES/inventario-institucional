@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { Tags, Plus, Trash2 } from "lucide-react";
 import EntityModal from "../modals/EntityModal";

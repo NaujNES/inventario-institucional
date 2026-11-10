@@ -1,7 +1,7 @@
-import React from "react";
 import { NavLink } from "react-router-dom";
 import { useApp } from "../../hooks/useApp";
-import { LayoutDashboard, Package, Tags, MapPin, ChartColumn, Settings, Boxes, X, Users, ClipboardList, Wrench, UserRound } from "lucide-react";
+import { PROJECT_TITLE } from "../../utils/project";
+import { LayoutDashboard, Package, Tags, MapPin, ChartColumn, Settings, X, Users, ClipboardList, Wrench, UserRound } from "lucide-react";
 import { nf } from "../../utils/helpers";
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -29,13 +29,15 @@ export default function Sidebar({ isOpen, onClose }) {
       )}
 
       <aside className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-line bg-surface transition-transform duration-200 ease-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex h-16 flex-none items-center gap-3 border-b border-line px-4">
-          <div className="grid size-8 flex-none place-items-center rounded-lg bg-ink text-surface shadow-sm">
-            <Boxes className="h-4 w-4" />
-          </div>
+        <div className="flex min-h-16 flex-none items-center gap-3 border-b border-line px-4 py-2">
+          <img
+            src="/logo.png"
+            alt="Escudo Institución Educativa Nuestra Señora de Chiquinquirá"
+            className="size-9 flex-none rounded-lg bg-white object-contain shadow-sm ring-1 ring-line"
+          />
           <div className="min-w-0 leading-tight flex-1">
-            <p className="truncate text-sm font-semibold tracking-tight text-ink">{prefs.institucion}</p>
-            <p className="text-xs text-ink-3">Inventario institucional</p>
+            <p className="text-[11px] font-semibold tracking-tight text-ink leading-tight">{PROJECT_TITLE}</p>
+            <p className="truncate text-[10px] text-ink-3">{prefs.institucion}</p>
           </div>
           <button onClick={onClose} className="lg:hidden text-ink-3 hover:text-ink">
             <X size={18} />

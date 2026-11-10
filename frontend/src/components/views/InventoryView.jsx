@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { Search, Download, Plus, MapPin, Edit2, Trash2, Eye, UserRound } from "lucide-react";
 import { nf } from "../../utils/helpers";
@@ -51,7 +51,7 @@ export default function InventoryView() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "inventario_institucional.csv";
+    link.download = "inventario_sala_computo_steam.csv";
     link.click();
     URL.revokeObjectURL(url);
   };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useApp } from "../../hooks/useApp";
 import { Shield, Edit2, Trash2 } from "lucide-react";
 import UserModal from "../modals/UserModal";

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   UserRound, Users, Package, MapPin, Eye, Plus, Star, RefreshCw, ArrowRightLeft,
 } from "lucide-react";
@@ -10,7 +10,7 @@ import AssetDetailModal from "./AssetDetailModal";
 
 export default function DocenteDetailModal({ isOpen, docenteId, onClose }) {
   const {
-    assets, categories, locations, docentes, assignments, fetchDocenteDetail, assignAsset,
+    assets, categories, locations, docentes, fetchDocenteDetail, assignAsset,
   } = useApp();
   const [detalle, setDetalle] = useState(null);
   const [loading, setLoading] = useState(false);

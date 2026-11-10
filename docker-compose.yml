@@ -1,36 +1,45 @@
 services:
   db:
     image: mysql:8.0
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: 12345
-      MYSQL_DATABASE: inventario_institucional
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DB:-inventario_institucional}
+      MYSQL_USER: ${MYSQL_USER:-appuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Define MYSQL_PASSWORD in .env}
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p12345"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
 
   backend:
     build: .
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - MYSQL_USER=root
-      - MYSQL_PASSWORD=12345
-      - MYSQL_HOST=db
-      - MYSQL_PORT=3306
-      - MYSQL_DB=inventario_institucional
-      - SECRET_KEY=mi_clave_super_secreta_para_el_inventario_2026
+      MYSQL_USER: ${MYSQL_USER:-appuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Define MYSQL_PASSWORD in .env}
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_DB: ${MYSQL_DB:-inventario_institucional}
+      SECRET_KEY: ${SECRET_KEY:?Define SECRET_KEY in .env}
+      ADMIN_DOCUMENT: ${ADMIN_DOCUMENT:-1001}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador Inicial}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD in .env}
     depends_on:
       db:
         condition: service_healthy
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     ports:
       - "80:80"
     depends_on:

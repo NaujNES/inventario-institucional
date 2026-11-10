@@ -1,6 +1,5 @@
-import React from "react";
 import { useApp } from "../../hooks/useApp";
-import { CircleCheck, Info, CircleAlert, X } from "lucide-react";
+import { CircleCheck, Info, CircleAlert } from "lucide-react";
 
 export default function Toasts() {
   const { toasts } = useApp();

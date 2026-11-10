@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useCallback } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useEffect, useCallback } from "react";
 import api from "../services/api";
 import { todayISO } from "../utils/helpers";
 
@@ -134,6 +135,18 @@ export function AppProvider({ children }) {
         api.get("/docentes/"),
       ]);
 
+      // Si alguna petición falla (por ejemplo, mientras el backend se
+      // reinicia) no dejamos la pantalla con datos viejos sin avisar.
+      const fallidas = results.filter((r) => r.status === "rejected");
+      if (fallidas.length > 0) {
+        console.error("No se pudieron cargar todos los datos:", fallidas);
+        showToast(
+          "Datos incompletos",
+          "Algunos datos no se pudieron actualizar. Recarga la página.",
+          "error"
+        );
+      }
+
       let mappedAssignments = [];
       if (results[7].status === "fulfilled") {
         mappedAssignments = results[7].value.data.map(mapAssignment);
@@ -220,7 +233,7 @@ export function AppProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     if (localStorage.getItem("token")) {

@@ -1,4 +1,3 @@
-import React from "react";
 import { useApp } from "../../hooks/useApp";
 import { FileSpreadsheet, Download, CheckCircle, Wrench, PackageX } from "lucide-react";
 import { plural } from "../../utils/helpers";
